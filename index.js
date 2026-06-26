@@ -388,19 +388,19 @@ app.get('/api/google/callback', wrap(handleGoogleCallback));  // Gmail
 app.get('/api/gmail/callback', wrap(handleGoogleCallback));   // alias per spec redirect URIs
 
 app.get('/api/integrations/status', auth, wrap(async (req, res) => {
-  const rows = await pool.query('SELECT purpose, (refresh_token IS NOT NULL) AS connected, updated_at FROM integration_tokens');
-  const map = {}; rows.rows.forEach(r => { map[r.purpose] = { connected: r.connected, updated_at: r.updated_at }; });
+  const rows = await pool.query('SELECT purpose, (refresh_token IS NOT NULL) AS connected, (access_token IS NOT NULL) AS has_token, updated_at FROM integration_tokens');
+  const map = {}; rows.rows.forEach(r => { map[r.purpose] = { connected: r.connected, has_token: r.has_token, updated_at: r.updated_at }; });
   res.json({
     gsc: { configured: !!(envOrNull('GOOGLE_CLIENT_ID') && envOrNull('GSC_REDIRECT_URI')), connected: !!(map.gsc && map.gsc.connected) || !!envOrNull('GSC_REFRESH_TOKEN') },
     gmail: { configured: !!(envOrNull('GOOGLE_CLIENT_ID') && envOrNull('GOOGLE_REDIRECT_URI')), connected: !!(map.gmail && map.gmail.connected) },
-    linkedin: { configured: !!envOrNull('LINKEDIN_CLIENT_ID'), connected: !!(map.linkedin && map.linkedin.connected) },
+    linkedin: { configured: !!envOrNull('LINKEDIN_CLIENT_ID'), connected: !!(map.linkedin && (map.linkedin.connected || map.linkedin.has_token)) },
     ahrefs: { configured: !!envOrNull('AHREFS_API_KEY') },
     moz: { configured: !!(envOrNull('MOZ_ACCESS_ID') && envOrNull('MOZ_SECRET_KEY')) },
     pagespeed: { configured: true, keyed: !!envOrNull('PAGESPEED_API_KEY') },
     semrush: { configured: !!envOrNull('SEMRUSH_API_KEY') },
-    facebook: { configured: !!(envOrNull('FACEBOOK_APP_ID') && envOrNull('FACEBOOK_APP_SECRET')), connected: !!(map.facebook && map.facebook.connected) },
-    instagram: { configured: !!envOrNull('INSTAGRAM_ACCESS_TOKEN'), connected: !!(map.instagram && map.instagram.connected) },
-    twitter: { configured: !!envOrNull('TWITTER_BEARER_TOKEN'), connected: !!(map.twitter && map.twitter.connected) },
+    facebook: { configured: !!(envOrNull('FACEBOOK_APP_ID') && envOrNull('FACEBOOK_APP_SECRET')), connected: !!(map.facebook && (map.facebook.connected || map.facebook.has_token)) },
+    instagram: { configured: !!envOrNull('INSTAGRAM_ACCESS_TOKEN'), connected: !!(map.instagram && (map.instagram.connected || map.instagram.has_token)) },
+    twitter: { configured: !!envOrNull('TWITTER_BEARER_TOKEN'), connected: !!(map.twitter && (map.twitter.connected || map.twitter.has_token)) },
   });
 }));
 
