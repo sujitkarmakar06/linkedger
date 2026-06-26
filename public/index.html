@@ -41,8 +41,14 @@
   .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
   .nav-item.active{background:var(--blue);color:#fff}
   .nav-item svg{width:18px;height:18px;flex:0 0 18px}
-  .collapse-btn{margin:auto 10px 14px;display:flex;align-items:center;gap:8px;color:#9aa7d4;cursor:pointer;padding:8px 10px;border-radius:8px}
+  .collapse-btn{margin:10px 10px 6px;display:flex;align-items:center;gap:8px;color:#9aa7d4;cursor:pointer;padding:8px 10px;border-radius:8px}
   .collapse-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+  .credit{display:flex;align-items:center;gap:7px;padding:10px 14px;margin-top:auto;border-top:1px solid rgba(255,255,255,.07);font-size:11px;color:#8e9cc8;letter-spacing:.2px}
+  .credit img{height:16px;width:auto;display:block;filter:brightness(0) invert(1);opacity:.85}
+  .sidebar.collapsed .credit{justify-content:center;padding:10px 4px}
+  .sidebar.collapsed .credit .credit-label{display:none}
+  .credit-login{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:22px;font-size:11.5px;color:var(--muted)}
+  .credit-login img{height:16px;width:auto;display:block}
   .main{flex:1;min-width:0;display:flex;flex-direction:column}
   .topstrip{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
   .topstrip h1{font-size:17px;margin:0;font-weight:650}
@@ -150,6 +156,11 @@
   a.nav-item,.nav-item{user-select:none}
   /* gentle gradient wash on main bg for depth */
   body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 380px at 78% -8%,rgba(77,139,245,.10),transparent 60%);z-index:-1}
+  /* respect users who prefer reduced motion (accessibility) */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    .kpi:hover,.card:hover,.platform:hover,.chip:hover{transform:none}
+  }
 </style>
 </head>
 <body>
@@ -280,7 +291,8 @@ function renderLogin(){
       $('div',{class:'field'}, $('label',{class:'fld'},'Email'), email),
       $('div',{class:'field'}, $('label',{class:'fld'},'Password'), pass),
       err, btn,
-      $('div',{class:'center small muted',style:{marginTop:'14px'}}, toggle)
+      $('div',{class:'center small muted',style:{marginTop:'14px'}}, toggle),
+      $('div',{class:'credit-login'}, $('span',null,'Designed by'), $('img',{src:'/solguruz-logo.png',alt:'SolGuruz'}))
     ))
   ));
   applyMode();
@@ -326,6 +338,10 @@ function renderApp(){
   var collapse = $('div',{class:'collapse-btn'}, icon('menu'), $('span',{class:'nav-label'},'Collapse'));
   collapse.addEventListener('click',function(){ state.collapsed=!state.collapsed; localStorage.setItem('ll_collapsed',state.collapsed?'1':'0'); renderApp(); });
   side.appendChild(collapse);
+  side.appendChild($('div',{class:'credit'},
+    $('span',{class:'credit-label'},'Designed by'),
+    $('img',{src:'/solguruz-logo.png',alt:'SolGuruz'})
+  ));
 
   var meta = PAGE_META[state.page]||['',''];
   var bell = $('div',{class:'bell',title:'Reminders'}, icon('bell'), state.reminders>0?$('span',{class:'dot'},String(state.reminders)):null);
@@ -975,6 +991,48 @@ async function pageTools(content){
   var hub=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Connected tools'), $('div',{class:'muted small',style:{margin:'4px 0 12px'}},'Every tool in one place. Data and actions run inside the dashboard.'));
   hub.appendChild(integrationsGrid(status));
   content.appendChild(hub);
+
+  // --- Meta (Facebook + Instagram) panel ---
+  var meta=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Facebook & Instagram'));
+  if(!status.facebook.connected){
+    meta.appendChild($('div',{class:'muted small',style:{marginTop:'6px'}}, status.facebook.configured
+      ? 'Not connected yet. Use the Connect button on the Facebook card above (it also links Instagram).'
+      : 'Not configured. Add FACEBOOK_APP_ID, FACEBOOK_APP_SECRET and FACEBOOK_REDIRECT_URI in Render.'));
+  } else {
+    var fbBox=$('div',{style:{marginTop:'10px'}}, $('div',{class:'muted small'},'Loading Page insights...'));
+    meta.appendChild(fbBox);
+    api('facebook/insights').then(function(d){ clr(fbBox);
+      var pg=d.page||{};
+      fbBox.appendChild($('div',{class:'grid kpis'},
+        mini('Page', dash(d.page_name||pg.name)),
+        mini('Followers', pg.followers_count!=null?fmtN(pg.followers_count):(pg.fan_count!=null?fmtN(pg.fan_count):'-'))));
+    }).catch(function(e){ clr(fbBox).appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'FB insights: '+e.message)); });
+
+    // Facebook post box (text + optional link)
+    var msg=$('textarea',{placeholder:'Write a post for the Facebook Page...',style:{width:'100%',minHeight:'72px',marginTop:'10px'}});
+    var lnk=$('input',{placeholder:'Optional link (e.g. a blog URL)',style:{width:'100%',marginTop:'8px'}});
+    var postBtn=$('button',{class:'btn primary',style:{marginTop:'8px'}},'Post to Facebook Page');
+    var postOut=$('div',{class:'small',style:{marginTop:'6px'}});
+    postBtn.addEventListener('click',async function(){ if(!msg.value.trim()&&!lnk.value.trim()){toast('Write something or add a link',true);return;}
+      postBtn.disabled=true; clr(postOut).appendChild($('span',{class:'muted'},'Posting...'));
+      try{ var r=await api('facebook/publish',{method:'POST',body:{message:msg.value.trim(),link:lnk.value.trim()}}); clr(postOut).appendChild($('span',{style:{color:'var(--ok)'}},'Posted. ID: '+r.post_id)); msg.value=''; lnk.value=''; }
+      catch(e){ clr(postOut).appendChild($('span',{style:{color:'var(--bad)'}},e.message)); } postBtn.disabled=false; });
+    meta.appendChild(msg); meta.appendChild(lnk); meta.appendChild(postBtn); meta.appendChild(postOut);
+
+    // Instagram (only if linked)
+    if(status.instagram.connected){
+      var igBox=$('div',{style:{marginTop:'14px',paddingTop:'12px',borderTop:'1px solid var(--line)'}}, $('strong',null,'Instagram'), $('div',{class:'muted small'},'Loading...'));
+      meta.appendChild(igBox);
+      api('instagram/insights').then(function(d){ var ig=d.ig||{}; clr(igBox); igBox.appendChild($('strong',null,'Instagram'));
+        igBox.appendChild($('div',{class:'grid kpis',style:{marginTop:'6px'}},
+          mini('Username', dash(ig.username)), mini('Followers', ig.followers_count!=null?fmtN(ig.followers_count):'-'), mini('Posts', ig.media_count!=null?fmtN(ig.media_count):'-')));
+        igBox.appendChild($('div',{class:'muted small',style:{marginTop:'8px'}},'Instagram publishing requires a public image URL. Use the API endpoint /api/instagram/publish with image_url + caption.'));
+      }).catch(function(e){ clr(igBox).appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'IG: '+e.message)); });
+    } else {
+      meta.appendChild($('div',{class:'muted small',style:{marginTop:'12px'}},'No Instagram business account is linked to this Page. Link it in Facebook Page settings, then reconnect.'));
+    }
+  }
+  content.appendChild(meta);
   // --- lookup ---
   var domInp=$('input',{placeholder:'example.com',style:{maxWidth:'260px'}});
   var lookBtn=$('button',{class:'btn primary'},icon('search'),'Lookup');
@@ -1271,8 +1329,8 @@ function integrationsGrid(status){
     ['Moz','#2e7fff','MZ',status.moz,{env:['MOZ_ACCESS_ID','MOZ_SECRET_KEY']}],
     ['LinkedIn','#0a66c2','IN',status.linkedin,{connect:'linkedin/auth-url',connectLabel:'LinkedIn',env:['LINKEDIN_CLIENT_ID','LINKEDIN_CLIENT_SECRET','LINKEDIN_REDIRECT_URI']}],
     ['Semrush','#ff642d','SR',status.semrush,{env:['SEMRUSH_API_KEY']}],
-    ['Facebook','#1877f2','FB',status.facebook,{env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET']}],
-    ['Instagram','#e1306c','IG',status.instagram,{env:['INSTAGRAM_ACCESS_TOKEN']}],
+    ['Facebook','#1877f2','FB',status.facebook,{connect:'facebook/auth-url',connectLabel:'Facebook',env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET','FACEBOOK_REDIRECT_URI']}],
+    ['Instagram','#e1306c','IG',status.instagram,{connect:'facebook/auth-url',connectLabel:'Instagram (via Facebook)',env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET','FACEBOOK_REDIRECT_URI']}],
     ['Twitter / X','#111111','X',status.twitter,{env:['TWITTER_BEARER_TOKEN']}]
   ];
   var g=$('div',{class:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'12px'}});
