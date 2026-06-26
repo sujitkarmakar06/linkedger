@@ -1202,6 +1202,7 @@ async function blLedger(box){ clr(box); box.appendChild($('div',{class:'card pad
 // Key tools: env = ['AHREFS_API_KEY', ...] -> show which env vars to set in Render.
 function platformCard(name,color,abbr,st,opts){
   opts = opts || {};
+  var isConnected = !!(st && st.connected);
   var label = !st ? 'Not available' : st.connected ? 'Connected' : st.configured ? 'Configured' : 'Not configured';
   var cls = st && st.connected ? 'b-live' : (st && st.configured ? 'b-pending' : 'b-unverifiable');
   var foot = $('div',{style:{marginTop:'8px'}});
@@ -1229,11 +1230,21 @@ function platformCard(name,color,abbr,st,opts){
     foot.appendChild($('div',{class:'small muted',style:{marginTop:'2px'}}, st.connected ? 'Active and authorized.' : 'Active.'));
   }
 
-  return $('div',{class:'platform',style:{alignItems:'flex-start'}},
+  // Connected badge gets a checkmark so connected platforms are unmistakable.
+  var badge = isConnected
+    ? $('span',{class:'badge b-live',style:{display:'inline-flex',alignItems:'center',gap:'4px'}},
+        $('span',{html:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'}),
+        'Connected')
+    : $('span',{class:'badge '+cls}, label);
+
+  var cardStyle = {alignItems:'flex-start'};
+  if (isConnected) { cardStyle.borderLeft = '3px solid var(--ok)'; }
+
+  return $('div',{class:'platform',style:cardStyle},
     $('div',{class:'pi',style:{background:color}}, abbr),
     $('div',{style:{flex:1}},
       $('div',{style:{fontWeight:600}}, name),
-      $('span',{class:'badge '+cls}, label),
+      badge,
       foot) );
 }
 function envHint(vars, caption){
