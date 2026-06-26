@@ -1,385 +1,1361 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>LinkLedger — One ledger for every backlink, pitch, and AI-search win</title>
-<meta name="description" content="LinkLedger keeps your backlink exchanges, outreach pipeline, link-health checks, and AI-search visibility in a single shared record your whole team can trust." />
-
-<!-- Tailwind via CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Typefaces: Space Grotesk (display), Inter (body), JetBrains Mono (ledger figures) -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-
-<script>
-  // Design tokens. Palette derives from LinkLedger's existing navy/blue tool identity,
-  // with a single disciplined "ledger blue" accent.
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          ink:    '#0B1020',   // near-black navy, primary text + dark sections
-          navy:   '#141B33',   // panel navy
-          paper:  '#F7F8FB',   // page background
-          line:   '#E3E7F0',   // hairline rules (the ledger lines)
-          blue:   '#3B6CF6',   // primary accent
-          blue600:'#2B57D6',
-          good:   '#16A34A',   // "live" status
-          warn:   '#D9822B',   // "pending" status
-          bad:    '#DC4B4B',   // "lost" status
-          muted:  '#6B7392',
-        },
-        fontFamily: {
-          display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-          body:    ['Inter', 'system-ui', 'sans-serif'],
-          mono:    ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        },
-        boxShadow: {
-          card: '0 1px 2px rgba(11,16,32,.04), 0 8px 24px rgba(11,16,32,.06)',
-          lift: '0 2px 4px rgba(11,16,32,.06), 0 16px 40px rgba(11,16,32,.10)',
-        },
-        // 8-point spacing scale is Tailwind's default (2=8px,4=16px,6=24px,8=32px...)
-      }
-    }
-  }
-</script>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkLedger - Backlink Exchange and SEO Ops Manager</title>
+<meta name="description" content="Internal tool to manage backlink exchanges, outreach, link-health checks, and GEO/AI-search visibility.">
+<meta name="theme-color" content="#0A1A4F">
+<meta name="robots" content="noindex,nofollow">
+<meta property="og:title" content="LinkLedger">
+<meta property="og:description" content="Backlink exchange and SEO operations manager.">
+<meta property="og:image" content="/logo-512.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <style>
-  html { scroll-behavior: smooth; }
-  body { font-family: Inter, system-ui, sans-serif; }
-  /* The signature device: a hairline "ledger rule" used as a section divider. */
-  .rule { background-image: linear-gradient(to right, #E3E7F0 0 100%); height: 1px; }
-  /* Ledger row hover lift */
-  .row-lift { transition: transform .18s ease, box-shadow .18s ease; }
-  .row-lift:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(11,16,32,.10); }
-  .btn { transition: transform .12s ease, background-color .15s ease, box-shadow .15s ease; }
-  .btn:active { transform: translateY(1px) scale(.99); }
-  .nav-link { transition: color .15s ease; }
-  /* Visible keyboard focus for accessibility */
-  a:focus-visible, button:focus-visible { outline: 2px solid #3B6CF6; outline-offset: 3px; border-radius: 6px; }
-  /* Reveal on load / scroll */
-  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  .reveal { opacity: 0; animation: riseIn .6s cubic-bezier(.2,.7,.2,1) forwards; }
-  .d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.21s}.d4{animation-delay:.29s}.d5{animation-delay:.37s}
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-    .reveal { opacity: 1; }
+  :root{
+    --navy:#0A1A4F; --navy-2:#13205c; --blue:#4D8BF5; --blue-600:#2f6fe0;
+    --ink:#0f1525; --muted:#5f7090; --line:#e6e9f0; --bg:#f5f7fb; --card:#fff;
+    --ok:#15a05a; --warn:#c98a00; --bad:#d23b3b; --chip:#eef2fb;
+    --radius:12px; --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue-600);text-decoration:none}
+  .hidden{display:none!important}
+  /* layout */
+  #app{display:flex;min-height:100vh}
+  .sidebar{width:248px;flex:0 0 248px;background:var(--navy);color:#cdd6ee;display:flex;flex-direction:column;transition:width .18s ease;position:sticky;top:0;height:100vh;overflow:auto}
+  .sidebar.collapsed{width:64px;flex-basis:64px}
+  .sidebar.collapsed .nav-label,.sidebar.collapsed .brand-text,.sidebar.collapsed .nav-group-title{display:none}
+  .brand{display:flex;align-items:center;gap:10px;padding:16px 16px;color:#fff}
+  .brand img{width:30px;height:30px}
+  .brand-text{font-weight:700;font-size:16px;letter-spacing:.2px}
+  .brand-text span{color:var(--blue)}
+  .nav-group{padding:6px 10px}
+  .nav-group-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#7e8cc0;padding:10px 8px 4px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:#cdd6ee;cursor:pointer;font-weight:500}
+  .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+  .nav-item.active{background:var(--blue);color:#fff}
+  .nav-item svg{width:18px;height:18px;flex:0 0 18px}
+  .collapse-btn{margin:10px 10px 6px;display:flex;align-items:center;gap:8px;color:#9aa7d4;cursor:pointer;padding:8px 10px;border-radius:8px}
+  .collapse-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+  .credit{display:flex;align-items:center;gap:7px;padding:10px 14px;margin-top:auto;border-top:1px solid rgba(255,255,255,.07);font-size:11px;color:#8e9cc8;letter-spacing:.2px}
+  .credit img{height:16px;width:auto;display:block;filter:brightness(0) invert(1);opacity:.85}
+  .sidebar.collapsed .credit{justify-content:center;padding:10px 4px}
+  .sidebar.collapsed .credit .credit-label{display:none}
+  .credit-login{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:22px;font-size:11.5px;color:var(--muted)}
+  .credit-login img{height:16px;width:auto;display:block}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topstrip{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .topstrip h1{font-size:17px;margin:0;font-weight:650}
+  .topstrip .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .bell{position:relative;cursor:pointer;color:var(--muted)}
+  .bell .dot{position:absolute;top:-3px;right:-3px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;line-height:16px}
+  .content{padding:22px;max-width:1180px;width:100%;margin:0 auto}
+  /* components */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .pad{padding:16px}
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{cursor:pointer}
+  .kpi .label{color:var(--muted);font-size:12.5px;font-weight:500}
+  .kpi .val{font-size:26px;font-weight:700;margin-top:4px}
+  .kpi .delta{font-size:12px;font-weight:600}
+  .delta.up{color:var(--ok)} .delta.down{color:var(--bad)}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .between{justify-content:space-between}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px}
+  .btn:hover{background:#f4f6fb}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.primary:hover{background:var(--blue-600)}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .btn.danger{color:var(--bad);border-color:#f0c8c8}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  input,select,textarea{font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;width:100%}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(77,139,245,.16)}
+  label.fld{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .field{margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:10px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 10px;border-bottom:1px solid #eef1f7;vertical-align:middle}
+  tr:hover td{background:#fafbff}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:#34406b;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent}
+  .chip.active{background:var(--blue);color:#fff}
+  .badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700}
+  .b-live{background:#e3f6ec;color:var(--ok)} .b-pending{background:#fef3da;color:var(--warn)}
+  .b-completed{background:#e7eefc;color:var(--blue-600)} .b-gone,.b-rejected,.b-missing{background:#fbe6e6;color:var(--bad)}
+  .b-alive{background:#e3f6ec;color:var(--ok)} .b-unverifiable{background:#eef1f7;color:var(--muted)}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:9px 14px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--navy);border-bottom-color:var(--blue)}
+  .muted{color:var(--muted)}
+  .empty{text-align:center;color:var(--muted);padding:34px 16px}
+  .empty svg{width:34px;height:34px;opacity:.4;margin-bottom:8px}
+  .bar{height:9px;background:#eef1f7;border-radius:6px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--blue)}
+  .toast{position:fixed;bottom:18px;right:18px;background:var(--navy);color:#fff;padding:11px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(10,26,79,.35);z-index:100;font-weight:600;font-size:13px}
+  .toast.bad{background:var(--bad)}
+  /* modal + drawer */
+  .overlay{position:fixed;inset:0;background:rgba(15,21,37,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(10,26,79,.35)}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:440px;max-width:94vw;background:#fff;box-shadow:-12px 0 40px rgba(10,26,79,.2);z-index:60;overflow:auto;animation:slideIn .2s ease}
+  @keyframes slideIn{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
+  .modal .hd,.drawer .hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff}
+  .x{cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
+  /* login */
+  .login-wrap{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+  @media(max-width:820px){.login-wrap{grid-template-columns:1fr}.login-brand{display:none}}
+  .login-brand{background:linear-gradient(150deg,var(--navy),#1b2f7a);color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+  .login-brand img{width:64px;height:64px}
+  .login-brand h2{font-size:26px;margin:0;max-width:360px;line-height:1.25}
+  .login-form{display:flex;align-items:center;justify-content:center;padding:32px}
+  .login-form .box{width:100%;max-width:340px}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .right{text-align:right} .center{text-align:center} .nowrap{white-space:nowrap}
+  .small{font-size:12px}
+
+  /* 3D / motion polish */
+  .card{transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .18s ease}
+  .kpi:hover,.card:hover{transform:translateY(-3px)}
+  .kpi:hover{box-shadow:0 14px 34px -16px rgba(20,26,82,.45)}
+  .brand span{background:linear-gradient(90deg,var(--blue),#7aa8ff);-webkit-background-clip:text;background-clip:text}
+  @keyframes pop{0%{transform:scale(.96);opacity:0}100%{transform:scale(1);opacity:1}}
+  .grid.kpis>*{animation:pop .45s cubic-bezier(.2,.7,.2,1) both}
+  .grid.kpis>*:nth-child(2){animation-delay:.05s}.grid.kpis>*:nth-child(3){animation-delay:.1s}.grid.kpis>*:nth-child(4){animation-delay:.15s}
+  .platform{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;transition:transform .18s ease,box-shadow .18s ease}
+  .platform:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .platform .pi{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;flex:0 0 40px}
+
+  /* ---- UI/UX polish pass (#19) ---- */
+  .content{animation:fadeUp .34s cubic-bezier(.2,.7,.2,1) both}
+  .topstrip{backdrop-filter:saturate(1.4) blur(8px);background:rgba(255,255,255,.86);box-shadow:0 1px 0 rgba(16,24,40,.04)}
+  .topstrip h1{letter-spacing:-.2px}
+  .nav-item{position:relative}
+  .nav-item.active::before{content:'';position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:3px;background:#fff;opacity:.9}
+  .sidebar{box-shadow:inset -1px 0 0 rgba(255,255,255,.04)}
+  .btn{transition:transform .12s ease,background .15s ease,box-shadow .15s ease}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{box-shadow:0 6px 16px -8px rgba(51,85,255,.6)}
+  .card{border-radius:14px}
+  .kpi{perspective:600px}
+  .kpi .val{letter-spacing:-.5px}
+  th{position:sticky;top:0;background:#fff;z-index:1}
+  .badge{letter-spacing:.2px}
+  .chip{transition:transform .12s ease,background .15s ease}
+  .chip:hover{transform:translateY(-1px)}
+  .empty{border:1px dashed var(--line);border-radius:12px;background:#fcfdff}
+  ::selection{background:rgba(77,139,245,.22)}
+  input,select,textarea{transition:border-color .15s ease,box-shadow .15s ease}
+  .modal,.drawer{animation:pop .26s cubic-bezier(.2,.7,.2,1) both}
+  a.nav-item,.nav-item{user-select:none}
+  /* gentle gradient wash on main bg for depth */
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 380px at 78% -8%,rgba(77,139,245,.10),transparent 60%);z-index:-1}
+  /* respect users who prefer reduced motion (accessibility) */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    .kpi:hover,.card:hover,.platform:hover,.chip:hover{transform:none}
   }
 </style>
 </head>
-
-<body class="bg-paper text-ink antialiased">
-
-<!-- ============================ NAVBAR ============================ -->
-<header class="sticky top-0 z-40 bg-paper/85 backdrop-blur-md border-b border-line">
-  <nav class="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between" aria-label="Primary">
-    <!-- Logo: the double-chevron ledger-fold mark + wordmark -->
-    <a href="#top" class="flex items-center gap-2.5">
-      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M13 4 5 16l8 12" stroke="#3B6CF6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M21 4l-8 12 8 12" stroke="#0B1020" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="font-display font-700 text-lg tracking-tight">LinkLedger</span>
-    </a>
-
-    <!-- Desktop links -->
-    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-      <a href="#features" class="nav-link hover:text-ink">Features</a>
-      <a href="#how" class="nav-link hover:text-ink">How it works</a>
-      <a href="#proof" class="nav-link hover:text-ink">Teams</a>
-      <a href="https://linkledger.onrender.com" class="nav-link hover:text-ink">Sign in</a>
-    </div>
-
-    <a href="https://linkledger.onrender.com"
-       class="btn hidden sm:inline-flex items-center gap-1.5 bg-ink text-paper text-sm font-semibold px-4 py-2 rounded-lg hover:bg-navy shadow-card">
-      Open the ledger
-      <span aria-hidden="true">→</span>
-    </a>
-
-    <!-- Mobile menu toggle -->
-    <button id="menuBtn" class="md:hidden p-2 -mr-2 text-ink" aria-label="Open menu" aria-expanded="false">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-  </nav>
-
-  <!-- Mobile drawer -->
-  <div id="mobileMenu" class="md:hidden hidden border-t border-line bg-paper">
-    <div class="px-5 py-4 flex flex-col gap-1 text-sm font-medium">
-      <a href="#features" class="py-2.5 text-muted hover:text-ink">Features</a>
-      <a href="#how" class="py-2.5 text-muted hover:text-ink">How it works</a>
-      <a href="#proof" class="py-2.5 text-muted hover:text-ink">Teams</a>
-      <a href="https://linkledger.onrender.com" class="py-2.5 text-muted hover:text-ink">Sign in</a>
-      <a href="https://linkledger.onrender.com" class="btn mt-2 inline-flex justify-center items-center gap-1.5 bg-ink text-paper font-semibold px-4 py-2.5 rounded-lg">Open the ledger →</a>
-    </div>
-  </div>
-</header>
-
-<main id="top">
-
-  <!-- ============================ HERO ============================ -->
-  <!-- Thesis: show the product's real texture — actual ledger rows with live status — instead of a stock image. -->
-  <section class="max-w-6xl mx-auto px-5 sm:px-8 pt-16 sm:pt-24 pb-16 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
-    <div>
-      <p class="reveal d1 font-mono text-xs tracking-[0.18em] uppercase text-blue mb-5">Backlink ops, on one page</p>
-      <h1 class="reveal d2 font-display font-700 tracking-tight text-4xl sm:text-5xl lg:text-[3.4rem] leading-[1.05]">
-        One ledger for every backlink, pitch, and AI-search win.
-      </h1>
-      <p class="reveal d3 mt-6 text-lg text-muted max-w-xl leading-relaxed">
-        Exchanges, outreach, link-health checks, and AI-search visibility — kept as one shared record your team can actually trust. No more scattered sheets, stale statuses, or "wait, who owns this link?"
-      </p>
-      <div class="reveal d4 mt-8 flex flex-col sm:flex-row gap-3">
-        <a href="https://linkledger.onrender.com"
-           class="btn inline-flex justify-center items-center gap-2 bg-blue text-white font-semibold px-6 py-3.5 rounded-xl hover:bg-blue600 shadow-card">
-          Open the ledger
-          <span aria-hidden="true">→</span>
-        </a>
-        <a href="#how"
-           class="btn inline-flex justify-center items-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-xl border border-line hover:bg-paper shadow-card">
-          See how it works
-        </a>
-      </div>
-      <p class="reveal d5 mt-5 font-mono text-xs text-muted">Built for in-house SEO teams and agencies running real link programs.</p>
-    </div>
-
-    <!-- Signature element: a live ledger panel -->
-    <div class="reveal d3">
-      <div class="bg-white rounded-2xl border border-line shadow-lift overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3.5 border-b border-line">
-          <span class="font-display font-600 text-sm">Exchange ledger</span>
-          <span class="font-mono text-[11px] text-muted">June 2026</span>
-        </div>
-        <!-- column header -->
-        <div class="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-2 text-[10px] uppercase tracking-wider text-muted font-mono border-b border-line">
-          <span>Domain</span><span class="text-right">DR</span><span class="text-right pl-3">Status</span>
-        </div>
-        <!-- rows -->
-        <ul class="divide-y divide-line">
-          <li class="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-3.5 items-center text-sm">
-            <span class="font-medium truncate">techcrunch-style-blog.com</span>
-            <span class="font-mono text-muted text-right">78</span>
-            <span class="text-right"><span class="inline-flex items-center gap-1 text-good font-medium text-xs"><span class="w-1.5 h-1.5 rounded-full bg-good"></span>Live</span></span>
-          </li>
-          <li class="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-3.5 items-center text-sm">
-            <span class="font-medium truncate">devtools-weekly.io</span>
-            <span class="font-mono text-muted text-right">64</span>
-            <span class="text-right"><span class="inline-flex items-center gap-1 text-good font-medium text-xs"><span class="w-1.5 h-1.5 rounded-full bg-good"></span>Live</span></span>
-          </li>
-          <li class="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-3.5 items-center text-sm">
-            <span class="font-medium truncate">startup-stack.dev</span>
-            <span class="font-mono text-muted text-right">52</span>
-            <span class="text-right"><span class="inline-flex items-center gap-1 text-warn font-medium text-xs"><span class="w-1.5 h-1.5 rounded-full bg-warn"></span>Pending</span></span>
-          </li>
-          <li class="grid grid-cols-[1fr_auto_auto] gap-3 px-5 py-3.5 items-center text-sm">
-            <span class="font-medium truncate">old-partner-site.net</span>
-            <span class="font-mono text-muted text-right">41</span>
-            <span class="text-right"><span class="inline-flex items-center gap-1 text-bad font-medium text-xs"><span class="w-1.5 h-1.5 rounded-full bg-bad"></span>Lost</span></span>
-          </li>
-        </ul>
-        <!-- balance footer -->
-        <div class="flex items-center justify-between px-5 py-3.5 bg-paper border-t border-line">
-          <span class="font-mono text-xs text-muted">Live balance</span>
-          <span class="font-mono font-700 text-ink">138 / 202</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="max-w-6xl mx-auto px-5 sm:px-8"><div class="rule"></div></div>
-
-  <!-- ============================ FEATURES ============================ -->
-  <section id="features" class="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24">
-    <header class="max-w-2xl">
-      <p class="font-mono text-xs tracking-[0.18em] uppercase text-blue mb-3">What it tracks</p>
-      <h2 class="font-display font-700 tracking-tight text-3xl sm:text-4xl leading-tight">Four columns of a link program, finally in one place.</h2>
-      <p class="mt-4 text-muted text-lg">Each one usually lives in its own spreadsheet or someone's head. LinkLedger keeps them reconciled.</p>
-    </header>
-
-    <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Card 1 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">Exchanges</h3>
-        <p class="text-muted leading-relaxed">Log every link swap with owner, anchor, target URL, and DR. See live, pending, and lost at a glance — and skip the reciprocal deals search engines discount.</p>
-      </article>
-      <!-- Card 2 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7Z"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">Outreach pipeline</h3>
-        <p class="text-muted leading-relaxed">Move prospects from pitch to placement without losing the thread. Email drafts, follow-up reminders, and who-said-what, attached to the record instead of buried in an inbox.</p>
-      </article>
-      <!-- Card 3 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">Link-health checks</h3>
-        <p class="text-muted leading-relaxed">Know the moment a hard-won link goes 404, nofollow, or quietly disappears — so you can recover it before a rankings dip tells you first.</p>
-      </article>
-      <!-- Card 4 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">AI-search visibility</h3>
-        <p class="text-muted leading-relaxed">Track whether AI answers and overviews are citing your pages, not just where you rank in blue links. Watch the GEO side of search alongside the classic one.</p>
-      </article>
-      <!-- Card 5 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">Shared by owner</h3>
-        <p class="text-muted leading-relaxed">Every row has an owner. See who's carrying the program, balance the load, and never lose a relationship when someone's out or moves on.</p>
-      </article>
-      <!-- Card 6 -->
-      <article class="row-lift bg-white rounded-2xl border border-line p-7 shadow-card">
-        <div class="w-11 h-11 rounded-xl bg-blue/10 text-blue flex items-center justify-center mb-5" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-        </div>
-        <h3 class="font-display font-600 text-lg mb-2">One source of truth</h3>
-        <p class="text-muted leading-relaxed">Search Console, Ahrefs, and your own data reconciled into a single dashboard — so the number you report is the number that's real.</p>
-      </article>
-    </div>
-  </section>
-
-  <!-- ============================ HOW IT WORKS ============================ -->
-  <!-- Numbered markers are justified here: this is a genuine sequence. -->
-  <section id="how" class="bg-ink text-paper">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24">
-      <header class="max-w-2xl">
-        <p class="font-mono text-xs tracking-[0.18em] uppercase text-blue mb-3">How it works</p>
-        <h2 class="font-display font-700 tracking-tight text-3xl sm:text-4xl leading-tight">From scattered sheets to a reconciled ledger.</h2>
-      </header>
-
-      <ol class="mt-12 grid md:grid-cols-3 gap-8">
-        <li class="relative">
-          <div class="font-mono text-blue text-sm mb-3">01</div>
-          <h3 class="font-display font-600 text-xl mb-2">Bring your links in</h3>
-          <p class="text-paper/70 leading-relaxed">Import exchanges from a sheet, pull competitor gaps from an Ahrefs export, and connect Search Console. The ledger fills itself in.</p>
-        </li>
-        <li class="relative">
-          <div class="font-mono text-blue text-sm mb-3">02</div>
-          <h3 class="font-display font-600 text-xl mb-2">Work the pipeline</h3>
-          <p class="text-paper/70 leading-relaxed">Assign owners, draft outreach, set follow-up reminders, and move prospects toward live placements — every step on the record.</p>
-        </li>
-        <li class="relative">
-          <div class="font-mono text-blue text-sm mb-3">03</div>
-          <h3 class="font-display font-600 text-xl mb-2">Watch the balance</h3>
-          <p class="text-paper/70 leading-relaxed">Health checks flag links that break, and the dashboard shows live-versus-total at all times. Report numbers you can stand behind.</p>
-        </li>
-      </ol>
-
-      <div class="mt-12">
-        <a href="https://linkledger.onrender.com" class="btn inline-flex items-center gap-2 bg-blue text-white font-semibold px-6 py-3.5 rounded-xl hover:bg-blue600">
-          Open the ledger <span aria-hidden="true">→</span>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================ SOCIAL PROOF ============================ -->
-  <!-- NOTE: These quotes are PLACEHOLDERS. Replace with real, attributed testimonials
-       before publishing. Do not ship invented names/companies as if real. -->
-  <section id="proof" class="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24">
-    <header class="max-w-2xl">
-      <p class="font-mono text-xs tracking-[0.18em] uppercase text-blue mb-3">Teams running on it</p>
-      <h2 class="font-display font-700 tracking-tight text-3xl sm:text-4xl leading-tight">Built for the people who own the links.</h2>
-      <p class="mt-4 text-muted">Replace the cards below with real quotes from your team or clients.</p>
-    </header>
-
-    <div class="mt-12 grid md:grid-cols-3 gap-6">
-      <figure class="bg-white rounded-2xl border border-line p-7 shadow-card flex flex-col">
-        <blockquote class="text-lg leading-relaxed flex-1">“[Placeholder quote — describe the before/after of moving the link program onto one ledger.]”</blockquote>
-        <figcaption class="mt-6 flex items-center gap-3">
-          <span class="w-10 h-10 rounded-full bg-line flex items-center justify-center font-display font-600 text-muted" aria-hidden="true">—</span>
-          <span><span class="block font-semibold text-sm">[Name]</span><span class="block text-xs text-muted">[Role], [Company]</span></span>
-        </figcaption>
-      </figure>
-      <figure class="bg-white rounded-2xl border border-line p-7 shadow-card flex flex-col">
-        <blockquote class="text-lg leading-relaxed flex-1">“[Placeholder quote — call out a specific feature that saved time, e.g. link-health alerts.]”</blockquote>
-        <figcaption class="mt-6 flex items-center gap-3">
-          <span class="w-10 h-10 rounded-full bg-line flex items-center justify-center font-display font-600 text-muted" aria-hidden="true">—</span>
-          <span><span class="block font-semibold text-sm">[Name]</span><span class="block text-xs text-muted">[Role], [Company]</span></span>
-        </figcaption>
-      </figure>
-      <figure class="bg-white rounded-2xl border border-line p-7 shadow-card flex flex-col">
-        <blockquote class="text-lg leading-relaxed flex-1">“[Placeholder quote — a line about reporting numbers leadership actually trusts.]”</blockquote>
-        <figcaption class="mt-6 flex items-center gap-3">
-          <span class="w-10 h-10 rounded-full bg-line flex items-center justify-center font-display font-600 text-muted" aria-hidden="true">—</span>
-          <span><span class="block font-semibold text-sm">[Name]</span><span class="block text-xs text-muted">[Role], [Company]</span></span>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- ============================ CTA BAND ============================ -->
-  <section class="max-w-6xl mx-auto px-5 sm:px-8 pb-16 sm:pb-24">
-    <div class="bg-navy text-paper rounded-3xl px-8 sm:px-14 py-14 sm:py-20 text-center shadow-lift">
-      <h2 class="font-display font-700 tracking-tight text-3xl sm:text-4xl leading-tight max-w-2xl mx-auto">Put the whole program on one page.</h2>
-      <p class="mt-4 text-paper/70 max-w-xl mx-auto text-lg">Stop reconciling spreadsheets at month-end. Start from a ledger that's already true.</p>
-      <a href="https://linkledger.onrender.com" class="btn mt-8 inline-flex items-center gap-2 bg-blue text-white font-semibold px-7 py-4 rounded-xl hover:bg-blue600">
-        Open the ledger <span aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
-
-</main>
-
-<!-- ============================ FOOTER ============================ -->
-<footer class="border-t border-line">
-  <div class="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-    <div class="flex items-center gap-2.5">
-      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M13 4 5 16l8 12" stroke="#3B6CF6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M21 4l-8 12 8 12" stroke="#0B1020" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="font-display font-600">LinkLedger</span>
-    </div>
-
-    <p class="text-sm text-muted order-last sm:order-none">© 2026 LinkLedger. All rights reserved.</p>
-
-    <div class="flex items-center gap-5 text-muted">
-      <a href="#" aria-label="LinkedIn" class="hover:text-ink transition-colors">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21h-4v-5.4c0-1.29-.02-2.95-1.8-2.95-1.8 0-2.08 1.4-2.08 2.85V21H9z"/></svg>
-      </a>
-      <a href="#" aria-label="X" class="hover:text-ink transition-colors">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.3 8.4L23.3 22h-6.8l-5.3-7-6.1 7H2l7.8-9L1.2 2H8l4.8 6.4L18.9 2Zm-1.2 18h1.9L7.4 4H5.4z"/></svg>
-      </a>
-    </div>
-  </div>
-
-  <!-- Ownership credit -->
-  <div class="border-t border-line">
-    <div class="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-center gap-2 text-xs text-muted">
-      <span>Designed by</span>
-      <span class="font-display font-700 text-ink">SolGuruz</span>
-    </div>
-  </div>
-</footer>
-
+<body>
+<div id="root"></div>
 <script>
-  // Mobile menu toggle
-  (function () {
-    var btn = document.getElementById('menuBtn');
-    var menu = document.getElementById('mobileMenu');
-    btn.addEventListener('click', function () {
-      var open = !menu.classList.contains('hidden');
-      menu.classList.toggle('hidden');
-      btn.setAttribute('aria-expanded', String(!open));
-    });
-    // Close the drawer after tapping a link
-    menu.querySelectorAll('a').forEach(function (a) {
-      a.addEventListener('click', function () { menu.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); });
-    });
-  })();
-</script>
+/* ============================ helpers ============================ */
+function $(tag, attrs){
+  var e = document.createElement(tag);
+  var kids = Array.prototype.slice.call(arguments, 2);
+  if (attrs) for (var k in attrs){
+    var v = attrs[k];
+    if (v == null) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.indexOf('on') === 0 && typeof v === 'function') e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v === false) { /* skip */ }
+    else e.setAttribute(k, v);
+  }
+  (function add(list){
+    for (var i=0;i<list.length;i++){
+      var kid = list[i];
+      if (kid == null || kid === false) continue;
+      if (Array.isArray(kid)) { add(kid); continue; }
+      e.appendChild((typeof kid === 'string' || typeof kid === 'number') ? document.createTextNode(String(kid)) : kid);
+    }
+  })(kids);
+  return e;
+}
+function clr(el){ while(el.firstChild) el.removeChild(el.firstChild); return el; }
+function dash(v){ return (v===null||v===undefined||v==='') ? '-' : v; }
+function fmtN(n){ if(n==null||n==='') return '-'; n=Number(n); if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'; return String(Math.round(n)); }
 
+var ICONS = {
+  dashboard:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+  geo:'M12 2a10 10 0 100 20 10 10 0 000-20zm0 0c2.5 2.5 4 6 4 10s-1.5 7.5-4 10m0-20C9.5 4.5 8 8 8 12s1.5 7.5 4 10M2 12h20',
+  link:'M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.71-1.71',
+  swap:'M7 16l-4-4 4-4M3 12h13M17 8l4 4-4 4M21 12H8',
+  target:'M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a6 6 0 100 12 6 6 0 000-12zm0 4a2 2 0 100 4 2 2 0 000-4z',
+  report:'M3 3v18h18M7 14l4-4 3 3 5-6',
+  health:'M3 12h4l2 6 4-14 2 8h6',
+  pitch:'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  mail:'M4 4h16v16H4zM4 6l8 6 8-6',
+  in:'M16 8a6 6 0 016 6v6h-4v-6a2 2 0 00-4 0v6h-4v-12h4v2a4 4 0 014-4zM2 9h4v12H2zM4 2a2 2 0 110 4 2 2 0 010-4z',
+  tools:'M14 7a4 4 0 01-5 5l-6 6 2 2 6-6a4 4 0 005-5l-2 2-2-2 2-2z',
+  bell:'M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0',
+  users:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+  menu:'M3 12h18M3 6h18M3 18h18', trash:'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14', plus:'M12 5v14M5 12h14',
+  search:'M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4-4'
+};
+function icon(name){
+  var s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  s.setAttribute('viewBox','0 0 24 24'); s.setAttribute('fill','none'); s.setAttribute('stroke','currentColor');
+  s.setAttribute('stroke-width','2'); s.setAttribute('stroke-linecap','round'); s.setAttribute('stroke-linejoin','round');
+  var p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', ICONS[name]||ICONS.dashboard); s.appendChild(p);
+  return s;
+}
+var LOGO_SVG = '<img src="/logo.png" width="30" height="30" alt="LinkLedger" style="display:block;object-fit:contain">';
+
+/* ============================ state + api ============================ */
+var state = {
+  token: localStorage.getItem('ll_token') || null,
+  user: null,
+  page: 'dashboard',
+  collapsed: localStorage.getItem('ll_collapsed') === '1',
+  reminders: 0,
+  geoTab: 'overview', blTab: 'mapper'
+};
+function toast(msg, bad){
+  var t = $('div',{class:'toast'+(bad?' bad':'')}, msg); document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 2600);
+}
+async function api(path, opts){
+  opts = opts || {};
+  var headers = Object.assign({'content-type':'application/json'}, opts.headers||{});
+  if (state.token) headers.authorization = 'Bearer ' + state.token;
+  var r = await fetch('/api/'+path, { method: opts.method||'GET', headers: headers, body: opts.body?JSON.stringify(opts.body):undefined });
+  var data = null; try { data = await r.json(); } catch(e){}
+  if (!r.ok) { var msg = (data&&data.error)||('HTTP '+r.status); if (r.status===401){ logout(); } throw new Error(msg); }
+  return data;
+}
+function logout(){ state.token=null; state.user=null; localStorage.removeItem('ll_token'); renderLogin(); }
+
+/* ============================ login ============================ */
+function renderLogin(){
+  var root = clr(document.getElementById('root'));
+  var email = $('input',{type:'email',value:'',placeholder:'you@company.com'});
+  var pass = $('input',{type:'password',placeholder:'Your password'});
+  var err = $('div',{class:'small',style:{color:'var(--bad)',minHeight:'18px',marginBottom:'8px'}});
+  var btn = $('button',{class:'btn primary',style:{width:'100%'}}, 'Sign in');
+  var mode = 'login';
+  var LABELS = {
+    login:    { title:'Welcome back',   subtitle:'Sign in to LinkLedger.',        btn:'Sign in',       toggle:'New here? Create an account' },
+    register: { title:'Create account', subtitle:'Set up your LinkLedger access.', btn:'Create account', toggle:'Have an account? Sign in' }
+  };
+  function applyMode(){
+    var L = LABELS[mode];
+    title.textContent = L.title;
+    subtitle.textContent = L.subtitle;
+    clr(btn).appendChild(document.createTextNode(L.btn));
+    toggle.textContent = L.toggle;
+    err.textContent = '';
+  }
+  async function submit(){
+    err.textContent=''; btn.disabled=true; clr(btn).appendChild($('span',{class:'spin'}));
+    try{
+      var path = mode==='login'?'auth/login':'auth/register';
+      var d = await api(path,{method:'POST',body:{email:email.value.trim(),password:pass.value,name:email.value.split('@')[0]}});
+      state.token=d.token; state.user=d.user; localStorage.setItem('ll_token',d.token); renderApp();
+    }catch(e){ err.textContent=e.message; btn.disabled=false; clr(btn).appendChild(document.createTextNode(LABELS[mode].btn)); }
+  }
+  btn.addEventListener('click',submit);
+  pass.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
+  var toggle = $('a',{href:'#',style:{cursor:'pointer'}}, LABELS.login.toggle);
+  toggle.addEventListener('click',function(ev){ ev.preventDefault(); mode = mode==='login'?'register':'login'; applyMode(); });
+  var title = $('h1',{style:{fontSize:'22px',margin:'0 0 4px'}}, LABELS.login.title);
+  var subtitle = $('div',{class:'muted',style:{marginBottom:'20px'}}, LABELS.login.subtitle);
+  root.appendChild($('div',{class:'login-wrap'},
+    $('div',{class:'login-brand'},
+      $('div',{html:LOGO_SVG.replace('width="30" height="30"','width="64" height="64"')}),
+      $('h2',null,'One ledger for every backlink, pitch, and AI-search win.'),
+      $('div',{class:'muted',style:{color:'#b9c4ec',maxWidth:'360px'}}, 'Exchanges, outreach, link-health checks, and GEO visibility - real data, shared by your team.')
+    ),
+    $('div',{class:'login-form'}, $('div',{class:'box'},
+      $('div',{html:LOGO_SVG,style:{marginBottom:'12px'}}),
+      title,
+      subtitle,
+      $('div',{class:'field'}, $('label',{class:'fld'},'Email'), email),
+      $('div',{class:'field'}, $('label',{class:'fld'},'Password'), pass),
+      err, btn,
+      $('div',{class:'center small muted',style:{marginTop:'14px'}}, toggle),
+      $('div',{class:'credit-login'}, $('span',null,'Designed by'), $('img',{src:'/solguruz-logo.png',alt:'SolGuruz'}))
+    ))
+  ));
+  applyMode();
+}
+/* ============================ app shell + nav ============================ */
+var NAV = [
+  {group:'Overview', items:[['dashboard','Dashboard','dashboard'],['geo','GEO / AI Visibility','geo']]},
+  {group:'Backlinks', items:[['backlinks','Backlinks Hub','link'],['exchanges','Exchanges','swap'],['prospects','Prospects','target']]},
+  {group:'Reports', items:[['analysis','Backlink Analysis','report'],['health','Link Health','health']]},
+  {group:'Outreach', items:[['pitch','Pitch Pipeline','pitch'],['email','Email Sender','mail'],['linkedin','LinkedIn Follow-ups','in']]},
+  {group:'Tools', items:[['tools','SEO Tools','tools']]},
+  {group:'Workspace', items:[['reminders','Reminders','bell'],['members','Members','users'],['account','My Account','users']]}
+];
+var PAGE_META = {
+  dashboard:['Dashboard','Backlink program at a glance'],
+  geo:['GEO / AI Visibility','Search and AI-engine visibility'],
+  backlinks:['Backlinks Hub','Map, acquire, reclaim, and verify links'],
+  exchanges:['Exchanges','Every link record in one place'],
+  prospects:['Prospects','Domains worth pursuing'],
+  analysis:['Backlink Analysis','Quality and reciprocity report'],
+  health:['Link Health','Live link verification'],
+  pitch:['Pitch Pipeline','Outreach from prospect to published'],
+  email:['Email Sender','Prepare, queue, and send via Gmail'],
+  linkedin:['LinkedIn Follow-ups','Search and track - no automation'],
+  tools:['SEO Tools','DR / DA lookups and data import'],
+  reminders:['Reminders','Tasks for the team'],
+  account:['My Account','Your profile and connected platforms'],
+  members:['Members','Your team']
+};
+function renderApp(){
+  var root = clr(document.getElementById('root'));
+  var side = $('aside',{class:'sidebar'+(state.collapsed?' collapsed':'')});
+  side.appendChild($('div',{class:'brand'}, $('span',{html:LOGO_SVG}), $('span',{class:'brand-text',html:'Link<span>Ledger</span>'})));
+  NAV.forEach(function(g){
+    var grp = $('div',{class:'nav-group'}, $('div',{class:'nav-group-title'}, g.group));
+    g.items.forEach(function(it){
+      var node = $('div',{class:'nav-item'+(state.page===it[0]?' active':''), title:it[1]}, icon(it[2]), $('span',{class:'nav-label'}, it[1]));
+      node.addEventListener('click',function(){ state.page=it[0]; renderApp(); });
+      grp.appendChild(node);
+    });
+    side.appendChild(grp);
+  });
+  var collapse = $('div',{class:'collapse-btn'}, icon('menu'), $('span',{class:'nav-label'},'Collapse'));
+  collapse.addEventListener('click',function(){ state.collapsed=!state.collapsed; localStorage.setItem('ll_collapsed',state.collapsed?'1':'0'); renderApp(); });
+  side.appendChild(collapse);
+  side.appendChild($('div',{class:'credit'},
+    $('span',{class:'credit-label'},'Designed by'),
+    $('img',{src:'/solguruz-logo.png',alt:'SolGuruz'})
+  ));
+
+  var meta = PAGE_META[state.page]||['',''];
+  var bell = $('div',{class:'bell',title:'Reminders'}, icon('bell'), state.reminders>0?$('span',{class:'dot'},String(state.reminders)):null);
+  bell.addEventListener('click',function(){ state.page='reminders'; renderApp(); });
+  var top = $('header',{class:'topstrip'},
+    $('div',null, $('h1',null,meta[0]), $('div',{class:'sub'},meta[1])),
+    $('div',{class:'row'},
+      bell,
+      $('button',{class:'btn sm', onclick:logout}, 'Sign out')
+    )
+  );
+  var content = $('main',{class:'content'}, $('div',{class:'muted'},'Loading...'));
+  var main = $('div',{class:'main'}, top, content);
+  root.appendChild($('div',{id:'app'}, side, main));
+  renderPage(content);
+}
+function renderPage(content){
+  var fns = { dashboard:pageDashboard, geo:pageGeo, backlinks:pageBacklinks, exchanges:pageExchanges,
+    prospects:pageProspects, analysis:pageAnalysis, health:pageHealth, pitch:pagePitch, email:pageEmail,
+    linkedin:pageLinkedIn, tools:pageTools, reminders:pageReminders, members:pageMembers, account:pageAccount };
+  var fn = fns[state.page] || pageDashboard;
+  Promise.resolve(fn(content)).catch(function(e){ clr(content).appendChild(errBox(e.message)); });
+}
+function errBox(msg){ return $('div',{class:'card pad', style:{color:'var(--bad)'}}, 'Error: '+msg); }
+function emptyState(text){ var e=$('div',{class:'empty'}, icon('report'), $('div',null, text||'Nothing here yet.')); return e; }
+function statusBadge(s){ var cls={live:'b-live',pending:'b-pending',completed:'b-completed',rejected:'b-rejected',prospect:'b-pending'}[s]||'b-unverifiable'; return $('span',{class:'badge '+cls}, dash(s)); }
+function modal(titleText, bodyEl, actions){
+  var ov = $('div',{class:'overlay'});
+  function close(){ ov.remove(); }
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  var foot = $('div',{class:'pad row',style:{justifyContent:'flex-end',borderTop:'1px solid var(--line)'}});
+  (actions||[]).forEach(function(a){ foot.appendChild(a); });
+  ov.appendChild($('div',{class:'modal'},
+    $('div',{class:'hd'}, $('strong',null,titleText), $('span',{class:'x',onclick:close},'×')),
+    $('div',{class:'pad'}, bodyEl), foot));
+  document.body.appendChild(ov);
+  return { close: close };
+}
+function field(labelText, inputEl){ return $('div',{class:'field'}, $('label',{class:'fld'},labelText), inputEl); }
+
+/* ============================ Dashboard ============================ */
+async function pageDashboard(content){
+  var d = await api('dashboard');
+  clr(content);
+  function kpi(label,val,extra){ var k=$('div',{class:'card pad kpi'}, $('div',{class:'label'},label), $('div',{class:'val'},val), extra||null);
+    k.addEventListener('click',function(){ state.page='exchanges'; renderApp(); }); return k; }
+  content.appendChild($('div',{class:'grid kpis'},
+    kpi('Total exchanges', String(d.total)),
+    kpi('Live links', String(d.live)),
+    kpi('This month ('+d.this_month_label+')', String(d.this_month)),
+    kpi('Owners', String(d.by_owner.length))
+  ));
+  // status breakdown
+  var statusCard = $('div',{class:'card pad'}, $('strong',null,'Status breakdown'));
+  if(!d.by_status.length) statusCard.appendChild(emptyState('No exchanges yet. Import your sheet from SEO Tools.'));
+  else { var max=Math.max.apply(null,d.by_status.map(function(s){return s.n;}));
+    d.by_status.forEach(function(s){ statusCard.appendChild($('div',{style:{margin:'10px 0'}},
+      $('div',{class:'row between small'}, $('span',null,dash(s.status)), $('span',{class:'muted'},String(s.n))),
+      $('div',{class:'bar'}, $('i',{style:{width:(s.n/max*100)+'%'}})) )); }); }
+  // per owner
+  var ownerCard = $('div',{class:'card pad'}, $('strong',null,'Exchanges per owner'));
+  if(!d.by_owner.length) ownerCard.appendChild(emptyState('-'));
+  else { var omax=Math.max.apply(null,d.by_owner.map(function(s){return s.n;}));
+    d.by_owner.forEach(function(s){ ownerCard.appendChild($('div',{style:{margin:'10px 0'}},
+      $('div',{class:'row between small'}, $('span',null,dash(s.owner)), $('span',{class:'muted'},String(s.n))),
+      $('div',{class:'bar'}, $('i',{style:{width:(s.n/omax*100)+'%',background:'var(--navy)'}})) )); }); }
+  content.appendChild($('div',{class:'grid',style:{gridTemplateColumns:'1fr 1fr',marginTop:'14px'}}, statusCard, ownerCard));
+  // monthly trend
+  var trend = $('div',{class:'card pad',style:{marginTop:'14px'}}, $('strong',null,'Monthly trend'));
+  if(!d.by_month.length) trend.appendChild(emptyState('-'));
+  else { var tmax=Math.max.apply(null,d.by_month.map(function(s){return s.n;}));
+    var rowEl=$('div',{class:'row',style:{alignItems:'flex-end',gap:'14px',height:'150px',marginTop:'12px'}});
+    d.by_month.forEach(function(s){ rowEl.appendChild($('div',{class:'center',style:{flex:'1'}},
+      $('div',{style:{height:(s.n/tmax*120)+'px',background:'var(--blue)',borderRadius:'6px 6px 0 0'}}),
+      $('div',{class:'small muted',style:{marginTop:'6px'}}, dash(s.month)),
+      $('div',{class:'small',style:{fontWeight:'700'}}, String(s.n)) )); });
+    trend.appendChild(rowEl); }
+  content.appendChild(trend);
+}
+/* ============================ Exchanges ============================ */
+var exFilter = { q:'', status:'', owner:'', month:'' };
+async function pageExchanges(content){
+  clr(content);
+  var search=$('input',{placeholder:'Search domain, anchor, URL...',value:exFilter.q,style:{maxWidth:'260px'}});
+  var statusSel=$('select',null,opt('','All statuses'),opt('live','live'),opt('pending','pending'),opt('completed','completed'),opt('prospect','prospect'),opt('rejected','rejected'));
+  statusSel.value=exFilter.status;
+  var ownerInp=$('input',{placeholder:'Owner',value:exFilter.owner,style:{maxWidth:'140px'}});
+  var addBtn=$('button',{class:'btn primary'}, icon('plus'),'Add exchange');
+  var bulkBtn=$('button',{class:'btn danger', disabled:true}, icon('trash'),'Delete selected');
+  function reload(){ exFilter={q:search.value,status:statusSel.value,owner:ownerInp.value,month:exFilter.month}; load(); }
+  search.addEventListener('input',debounce(reload,300)); statusSel.addEventListener('change',reload); ownerInp.addEventListener('input',debounce(reload,350));
+  addBtn.addEventListener('click',function(){ exchangeForm(null,load); });
+  var bar=$('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('div',{class:'row'},search,statusSel,ownerInp), $('div',{class:'row'},bulkBtn,addBtn));
+  content.appendChild(bar);
+  var tableCard=$('div',{class:'card'}); content.appendChild(tableCard);
+  var selected={};
+  async function load(){
+    clr(tableCard).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var qs=new URLSearchParams(); if(exFilter.q)qs.set('q',exFilter.q); if(exFilter.status)qs.set('status',exFilter.status); if(exFilter.owner)qs.set('owner',exFilter.owner); if(exFilter.month)qs.set('month',exFilter.month);
+    var d=await api('exchanges?'+qs.toString()); selected={};
+    clr(tableCard);
+    if(!d.rows.length){ tableCard.appendChild(emptyState('No exchanges match. Add one or import from SEO Tools.')); return; }
+    var checkAll=$('input',{type:'checkbox'});
+    var thead=$('tr',null,$('th',null,checkAll),$('th',null,'Domain'),$('th',null,'Target / anchor'),$('th',null,'Type'),$('th',null,'DR'),$('th',null,'Owner'),$('th',null,'Status'),$('th',null,'Month'),$('th',null,''));
+    var tbody=$('tbody');
+    function refreshBulk(){ var n=Object.keys(selected).length; bulkBtn.disabled=n===0; clr(bulkBtn).appendChild(icon('trash')); bulkBtn.appendChild(document.createTextNode(n?('Delete '+n):'Delete selected')); }
+    checkAll.addEventListener('change',function(){ d.rows.forEach(function(r){ selected[r.id]=checkAll.checked; }); tbody.querySelectorAll('input[type=checkbox]').forEach(function(c){c.checked=checkAll.checked;}); refreshBulk(); });
+    d.rows.forEach(function(r){
+      var cb=$('input',{type:'checkbox'}); cb.addEventListener('change',function(){ selected[r.id]=cb.checked; if(!cb.checked) delete selected[r.id]; refreshBulk(); });
+      var tr=$('tr',null,
+        $('td',null,cb),
+        $('td',null,$('strong',null,dash(r.prospect_domain))),
+        $('td',null, $('div',{class:'small'},dash(r.our_target_url)), $('div',{class:'small muted'},dash(r.anchor_text))),
+        $('td',null,$('span',{class:'chip'},dash(r.link_type))),
+        $('td',null,dash(r.domain_rating)),
+        $('td',null,dash(r.owner_name)),
+        $('td',null,statusBadge(r.status)),
+        $('td',null,dash(r.month_label)),
+        $('td',{class:'right'}, linkBtn('Open',function(){ exchangeDrawer(r,load); }))
+      );
+      tbody.appendChild(tr);
+    });
+    tableCard.appendChild($('div',{style:{overflowX:'auto'}}, $('table',null,$('thead',null,thead),tbody)));
+    refreshBulk();
+  }
+  bulkBtn.addEventListener('click',async function(){ var ids=Object.keys(selected).map(Number); if(!ids.length)return; if(!confirm('Delete '+ids.length+' exchange(s)?'))return; await api('exchanges/bulk-delete',{method:'POST',body:{ids:ids}}); toast('Deleted '+ids.length); load(); });
+  load();
+}
+function opt(v,l){ return $('option',{value:v},l); }
+function linkBtn(text,fn){ var b=$('button',{class:'btn sm'},text); b.addEventListener('click',fn); return b; }
+function debounce(fn,ms){ var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+function exchangeForm(existing,onDone){
+  var b=existing||{};
+  var f={};
+  function inp(k,ph,val){ var e=$('input',{placeholder:ph,value:val!=null?val:(b[k]||'')}); f[k]=e; return e; }
+  var typeSel=$('select',null,opt('dofollow','dofollow'),opt('nofollow','nofollow'),opt('brand_mention','brand_mention')); typeSel.value=b.link_type||'dofollow'; f.link_type=typeSel;
+  var statusSel=$('select',null,opt('pending','pending'),opt('live','live'),opt('completed','completed'),opt('prospect','prospect'),opt('rejected','rejected')); statusSel.value=b.status||'pending'; f.status=statusSel;
+  var lhSel=$('select',null,opt('pending','pending'),opt('live','live'),opt('lost','lost'),opt('removed','removed')); lhSel.value=b.link_status||'pending'; f.link_status=lhSel;
+  var body=$('div',null,
+    field('Prospect domain *', inp('prospect_domain','example.com')),
+    field('Blog URL (partner page with our link)', inp('blog_url','https://partner.com/article')),
+    field('Our target URL (link to SolGuruz)', inp('our_target_url','https://solguruz.com/page')),
+    field('Anchor text', inp('anchor_text','anchor')),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Link type',typeSel)), $('div',{style:{flex:1}},field('Status',statusSel))),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Link health',lhSel)), $('div',{style:{flex:1}},field('Domain rating',inp('domain_rating','DR')))),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Owner',inp('owner_name','owner'))), $('div',{style:{flex:1}},field('Month label',inp('month_label','Jun 2026')))),
+    field('Contact email', inp('contact_email','name@domain.com')),
+    $('div',{style:{borderTop:'1px solid var(--line)',margin:'8px 0',paddingTop:'8px'}}, $('strong',{class:'small muted'},'Reciprocal link we gave (outbound)')),
+    field('Our source blog (where we placed their link)', inp('reciprocal_source','https://solguruz.com/blog/...')),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Reciprocal anchor',inp('reciprocal_anchor','anchor'))), $('div',{style:{flex:1}},field('Reciprocal target',inp('reciprocal_target','https://partner.com/')))),
+    field('Notes', (function(){ var t=$('textarea',{rows:'3'},b.notes||''); f.notes=t; return t; })())
+  );
+  var save=$('button',{class:'btn primary'},'Save');
+  var m=modal(existing?'Edit exchange':'Add exchange', body, [save]);
+  save.addEventListener('click',async function(){
+    var payload={}; for(var k in f) payload[k]=f[k].value;
+    if(!payload.prospect_domain){ toast('Domain required',true); return; }
+    try{ if(existing) await api('exchanges/'+existing.id,{method:'PUT',body:payload}); else await api('exchanges',{method:'POST',body:payload});
+      m.close(); toast('Saved'); onDone&&onDone(); }catch(e){ toast(e.message,true); }
+  });
+}
+function contactModal(r){
+  var tab='email';
+  var to=$('input',{value:r.contact_email||'',placeholder:'name@domain.com'});
+  var subj=$('input',{value:'Link collaboration with '+(r.prospect_domain||''),placeholder:'Subject'});
+  var bodyTa=$('textarea',{rows:'6',placeholder:'Write your message...'},
+    'Hi '+(r.contact_name||'there')+',\n\nThanks for the link collaboration on '+(r.prospect_domain||'your site')+'. ');
+  var liName=$('input',{value:r.contact_name||'',placeholder:'Full name'});
+  var liCompany=$('input',{value:r.prospect_domain||'',placeholder:'Company / domain'});
+  var area=$('div');
+  function renderTab(){
+    clr(area);
+    if(tab==='email'){
+      area.appendChild($('div',null,
+        field('To',to), field('Subject',subj), field('Message',bodyTa),
+        $('div',{class:'muted small',style:{marginBottom:'8px'}},'Sends through your connected Gmail. If Gmail is not connected yet, it stays queued in Email Sender.')));
+    } else {
+      area.appendChild($('div',null,
+        field('Name',liName), field('Company / domain',liCompany),
+        $('div',{class:'muted small',style:{marginBottom:'8px'}},'We never automate LinkedIn actions. Find opens a people search; Log adds a follow-up to track.')));
+    }
+  }
+  var tabs=$('div',{class:'tabs'},
+    (function(){ var t=$('div',{class:'tab active'},'Email (Gmail)'); t.addEventListener('click',function(){ tab='email'; tabs.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');}); t.classList.add('active'); renderTab(); }); return t; })(),
+    (function(){ var t=$('div',{class:'tab'},'LinkedIn'); t.addEventListener('click',function(){ tab='linkedin'; tabs.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');}); t.classList.add('active'); renderTab(); }); return t; })()
+  );
+  renderTab();
+  var act=$('button',{class:'btn primary'},'Send');
+  var m=modal('Contact '+(r.prospect_domain||'prospect'), $('div',null,tabs,area), [act]);
+  act.addEventListener('click',async function(){
+    try{
+      if(tab==='email'){
+        if(!to.value||!subj.value){ toast('To and subject required',true); return; }
+        var q=await api('email/queue',{method:'POST',body:{to_email:to.value,subject:subj.value,body:bodyTa.value}});
+        try{ await api('email/send/'+q.row.id,{method:'POST'}); toast('Email sent'); }
+        catch(e){ toast('Queued (connect Gmail to send): '+e.message); }
+        m.close();
+      } else {
+        await api('linkedin/followups',{method:'POST',body:{person_name:liName.value||r.prospect_domain,company:liCompany.value}});
+        var u=await api('linkedin/find-url?q='+encodeURIComponent((liName.value||'')+' '+(liCompany.value||'')));
+        window.open(u.url,'_blank'); toast('Logged + opened LinkedIn search'); m.close();
+      }
+    }catch(e){ toast(e.message,true); }
+  });
+}
+function exchangeDrawer(r,onChange){
+  var ov=$('div',{class:'overlay'}); function close(){ ov.remove(); }
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  var commentsWrap=$('div',null,$('div',{class:'muted small'},'Loading comments...'));
+  var d=$('div',{class:'drawer'},
+    $('div',{class:'hd'}, $('strong',null,dash(r.prospect_domain)), $('span',{class:'x',onclick:close},'×')),
+    $('div',{class:'pad'},
+      kv('Target URL',dash(r.our_target_url)), kv('Anchor',dash(r.anchor_text)), kv('Type',dash(r.link_type)),
+      kv('Domain rating',dash(r.domain_rating)), kv('Owner',dash(r.owner_name)), kv('Status',statusBadge(r.status)),
+      kv('Month',dash(r.month_label)), kv('Contact',dash(r.contact_email)),
+      r.verdict?kv('Last check',dash(r.verdict)):null, kv('Notes',dash(r.notes)),
+      $('div',{class:'row',style:{marginTop:'14px'}}, linkBtn('Edit',function(){ close(); exchangeForm(r,onChange); }),
+        (function(){ var b=$('button',{class:'btn sm primary'},icon('mail'),'Contact'); b.addEventListener('click',function(){ contactModal(r); }); return b; })(),
+        (function(){ var b=$('button',{class:'btn sm danger'},icon('trash'),'Delete'); b.addEventListener('click',async function(){ if(!confirm('Delete this exchange?'))return; await api('exchanges/'+r.id,{method:'DELETE'}); close(); toast('Deleted'); onChange&&onChange(); }); return b; })()
+      ),
+      $('hr',{style:{margin:'16px 0',border:'none',borderTop:'1px solid var(--line)'}}),
+      $('strong',null,'Comments'), commentsWrap
+    )
+  );
+  document.body.appendChild(ov); ov.appendChild(d);
+  (async function(){
+    var c=await api('exchanges/'+r.id+'/comments'); clr(commentsWrap);
+    if(!c.rows.length) commentsWrap.appendChild($('div',{class:'muted small',style:{margin:'8px 0'}},'No comments yet.'));
+    c.rows.forEach(function(cm){ commentsWrap.appendChild($('div',{style:{margin:'8px 0',padding:'8px 10px',background:'#f7f9fd',borderRadius:'8px'}}, $('div',{class:'small'},cm.body), $('div',{class:'small muted'}, dash(cm.author)+' - '+new Date(cm.created_at).toLocaleString()))); });
+    var ta=$('textarea',{rows:'2',placeholder:'Add a comment...'}); var btn=$('button',{class:'btn sm primary',style:{marginTop:'6px'}},'Comment');
+    btn.addEventListener('click',async function(){ if(!ta.value.trim())return; await api('exchanges/'+r.id+'/comments',{method:'POST',body:{body:ta.value}}); exchangeDrawer(r,onChange); close(); });
+    commentsWrap.appendChild(ta); commentsWrap.appendChild(btn);
+  })();
+}
+function kv(k,v){ return $('div',{class:'row',style:{padding:'7px 0',borderBottom:'1px solid #f0f2f8'}}, $('div',{class:'small muted',style:{width:'120px',flex:'0 0 120px'}},k), $('div',{class:'small',style:{flex:1}}, typeof v==='string'?v:v)); }
+
+/* ============================ Prospects ============================ */
+var prospBand='';
+async function pageProspects(content){
+  clr(content);
+  var search=$('input',{placeholder:'Search domain, contact, niche...',style:{maxWidth:'240px'}});
+  var statusSel=$('select',null,opt('','All status'),opt('active','active'),opt('negotiating','negotiating'),opt('won','won'),opt('inactive','inactive'));
+  var bandSel=$('select',null,opt('','All DR'),opt('60','60+'),opt('40','40-59'),opt('low','under 40'),opt('none','no data'));
+  var addBtn=$('button',{class:'btn primary'},icon('plus'),'Add prospect');
+  addBtn.addEventListener('click',function(){ prospectForm(null,load); });
+  content.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('div',{class:'row'},search,statusSel,bandSel), addBtn));
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function load(){
+    clr(card).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var qs=new URLSearchParams(); if(search.value)qs.set('q',search.value); if(statusSel.value)qs.set('status',statusSel.value);
+    var d=await api('prospects?'+qs.toString()); var rows=d.rows;
+    var band=bandSel.value;
+    rows=rows.filter(function(r){ var dr=r.domain_rating;
+      if(band==='60') return dr!=null&&dr>=60; if(band==='40') return dr!=null&&dr>=40&&dr<60;
+      if(band==='low') return dr!=null&&dr<40; if(band==='none') return dr==null; return true; });
+    clr(card);
+    if(!rows.length){ card.appendChild(emptyState('No prospects match. Add one or adjust filters.')); return; }
+    var tbody=$('tbody');
+    rows.forEach(function(r){
+      var tr=$('tr',null,
+        $('td',null,$('strong',null,dash(r.domain))),
+        $('td',{class:'center'},dash(r.domain_rating)),
+        $('td',null,dash(r.contact_name)),
+        $('td',null,statusBadge(r.status)),
+        $('td',null,$('span',{class:'small muted'},dash(r.niche))),
+        $('td',null,dash(r.owner_name)),
+        $('td',{class:'right'}, linkBtn('Open',function(){ prospectDrawer(r,load); })) );
+      tbody.appendChild(tr);
+    });
+    card.appendChild($('div',{style:{overflowX:'auto'}}, $('table',null,
+      $('thead',null,$('tr',null,$('th',null,'Domain'),$('th',{class:'center'},'DR'),$('th',null,'Contact'),$('th',null,'Status'),$('th',null,'Niche'),$('th',null,'Owner'),$('th',null,''))),
+      tbody)));
+  }
+  search.addEventListener('input',debounce(load,250)); statusSel.addEventListener('change',load); bandSel.addEventListener('change',load);
+  load();
+}
+function prospectForm(existing,onDone){
+  var b=existing||{}; var f={};
+  function inp(k,ph){ var e=$('input',{value:b[k]!=null?b[k]:'',placeholder:ph}); f[k]=e; return e; }
+  var statusSel=$('select',null,opt('active','active'),opt('negotiating','negotiating'),opt('won','won'),opt('inactive','inactive')); statusSel.value=b.status||'active'; f.status=statusSel;
+  var sites=$('textarea',{rows:'2',placeholder:'Pages/sites they offer (one per line or | separated)'}, b.sites_offered||''); f.sites_offered=sites;
+  var notes=$('textarea',{rows:'2',placeholder:'Notes'}, b.notes||''); f.notes=notes;
+  var body=$('div',null,
+    field('Domain *', inp('domain','example.com')),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Domain rating',inp('domain_rating','DR'))), $('div',{style:{flex:1}},field('Status',statusSel))),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Contact name',inp('contact_name','name'))), $('div',{style:{flex:1}},field('Contact email',inp('contact_email','name@domain.com')))),
+    $('div',{class:'row'}, $('div',{style:{flex:1}},field('Niche',inp('niche','e.g. SaaS, fintech'))), $('div',{style:{flex:1}},field('Owner',inp('owner_name','owner')))),
+    field('Sites offered', sites),
+    field('Notes', notes)
+  );
+  var save=$('button',{class:'btn primary'},'Save');
+  var m=modal(existing?'Edit prospect':'Add prospect', body, [save]);
+  save.addEventListener('click',async function(){
+    var payload={}; for(var k in f) payload[k]=f[k].value;
+    if(!payload.domain){ toast('Domain required',true); return; }
+    try{ if(existing) await api('prospects/'+existing.id,{method:'PUT',body:payload}); else await api('prospects',{method:'POST',body:payload});
+      m.close(); toast('Saved'); onDone&&onDone(); }catch(e){ toast(e.message,true); }
+  });
+}
+function prospectDrawer(r,onChange){
+  var ov=$('div',{class:'overlay'}); function close(){ ov.remove(); }
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  var commentsWrap=$('div',null,$('div',{class:'muted small'},'Loading comments...'));
+  var sites=(r.sites_offered||'').split('|').map(function(x){return x.trim();}).filter(Boolean);
+  var sitesEl=$('div'); if(sites.length) sites.forEach(function(u){ sitesEl.appendChild($('div',{class:'small'}, $('a',{href:u,target:'_blank'},u))); }); else sitesEl.appendChild($('span',{class:'muted small'},'-'));
+  var d=$('div',{class:'drawer'},
+    $('div',{class:'hd'}, $('strong',null,dash(r.domain)), $('span',{class:'x',onclick:close},'×')),
+    $('div',{class:'pad'},
+      kv('Domain rating',dash(r.domain_rating)), kv('Status',statusBadge(r.status)), kv('Contact',dash(r.contact_name)),
+      kv('Email',dash(r.contact_email)), kv('Niche',dash(r.niche)), kv('Owner',dash(r.owner_name)),
+      $('div',{style:{padding:'7px 0',borderBottom:'1px solid #f0f2f8'}}, $('div',{class:'small muted',style:{marginBottom:'4px'}},'Sites offered'), sitesEl),
+      kv('Notes',dash(r.notes)),
+      $('div',{class:'row',style:{marginTop:'14px'}},
+        linkBtn('Edit',function(){ close(); prospectForm(r,onChange); }),
+        (function(){ var b=$('button',{class:'btn sm primary'},icon('mail'),'Contact'); b.addEventListener('click',function(){ contactModal({prospect_domain:r.domain,contact_email:r.contact_email,contact_name:r.contact_name}); }); return b; })(),
+        (function(){ var b=$('button',{class:'btn sm danger'},icon('trash'),'Delete'); b.addEventListener('click',async function(){ if(!confirm('Delete this prospect?'))return; await api('prospects/'+r.id,{method:'DELETE'}); close(); toast('Deleted'); onChange&&onChange(); }); return b; })()
+      ),
+      $('hr',{style:{margin:'16px 0',border:'none',borderTop:'1px solid var(--line)'}}),
+      $('strong',null,'Comments'), commentsWrap
+    )
+  );
+  document.body.appendChild(ov); ov.appendChild(d);
+  (async function(){
+    var c=await api('prospects/'+r.id+'/comments'); clr(commentsWrap);
+    if(!c.rows.length) commentsWrap.appendChild($('div',{class:'muted small',style:{margin:'8px 0'}},'No comments yet.'));
+    c.rows.forEach(function(cm){ commentsWrap.appendChild($('div',{style:{margin:'8px 0',padding:'8px 10px',background:'#f7f9fd',borderRadius:'8px'}}, $('div',{class:'small'},cm.body), $('div',{class:'small muted'}, dash(cm.author)+' - '+new Date(cm.created_at).toLocaleString()))); });
+    var ta=$('textarea',{rows:'2',placeholder:'Add a comment...'}); var btn=$('button',{class:'btn sm primary',style:{marginTop:'6px'}},'Comment');
+    btn.addEventListener('click',async function(){ if(!ta.value.trim())return; await api('prospects/'+r.id+'/comments',{method:'POST',body:{body:ta.value}}); close(); prospectDrawer(r,onChange); });
+    commentsWrap.appendChild(ta); commentsWrap.appendChild(btn);
+  })();
+}
+
+/* ============================ Backlink Analysis ============================ */
+async function pageAnalysis(content){
+  clr(content);
+  var a=await api('analysis');
+  if(!a.totals){ content.appendChild($('div',{class:'card'},emptyState('No data to analyze yet.'))); return; }
+  // KPI row
+  content.appendChild($('div',{class:'grid kpis'},
+    mini('Total backlinks',a.totals), mini('Avg. DR',dash(a.dr.avg_dr)),
+    mini('Live links',a.health.live), mini('Reciprocal given',a.reciprocal.given)));
+  function barCard(title,items,color){
+    var c=$('div',{class:'card pad'}, $('strong',null,title));
+    var max=Math.max.apply(null,items.map(function(x){return x.n;}))||1;
+    items.forEach(function(x){ c.appendChild($('div',{style:{margin:'9px 0'}},
+      $('div',{class:'row between small'},$('span',null,dash(x.label)),$('span',{class:'muted'},String(x.n))),
+      $('div',{class:'bar'},$('i',{style:{width:(x.n/max*100)+'%',background:color||'var(--blue)'}})))); });
+    return c;
+  }
+  var dr=a.dr;
+  var drItems=[{label:'DR 60+',n:dr.dr60},{label:'DR 40-59',n:dr.dr40},{label:'DR under 40',n:dr.drlow},{label:'No data',n:dr.drnone}];
+  var typeItems=a.link_types.map(function(t){return {label:t.k,n:t.n};});
+  content.appendChild($('div',{class:'grid',style:{gridTemplateColumns:'1fr 1fr',marginTop:'14px'}},
+    barCard('Domain rating distribution',drItems),
+    barCard('Link type',typeItems,'var(--navy)')));
+  // link health badges
+  var h=a.health;
+  var healthCard=$('div',{class:'card pad'}, $('strong',null,'Link health'),
+    $('div',{class:'grid kpis',style:{marginTop:'10px'}},
+      $('div',{class:'card pad'},$('div',{class:'label muted small'},'Live'),$('div',{style:{fontSize:'22px',fontWeight:'700'}},$('span',{class:'badge b-live'},String(h.live)))),
+      $('div',{class:'card pad'},$('div',{class:'label muted small'},'Lost'),$('div',{style:{fontSize:'22px',fontWeight:'700'}},$('span',{class:'badge b-missing'},String(h.lost)))),
+      $('div',{class:'card pad'},$('div',{class:'label muted small'},'Removed'),$('div',{style:{fontSize:'22px',fontWeight:'700'}},$('span',{class:'badge b-missing'},String(h.removed)))),
+      $('div',{class:'card pad'},$('div',{class:'label muted small'},'Pending'),$('div',{style:{fontSize:'22px',fontWeight:'700'}},$('span',{class:'badge b-pending'},String(h.pending))))));
+  content.appendChild($('div',{style:{marginTop:'14px'}},healthCard));
+  // monthly trend
+  var trend=$('div',{class:'card pad',style:{marginTop:'14px'}}, $('strong',null,'Backlinks per month'));
+  if(a.by_month.length){ var tmax=Math.max.apply(null,a.by_month.map(function(x){return x.n;}))||1;
+    var row=$('div',{class:'row',style:{alignItems:'flex-end',gap:'8px',height:'150px',marginTop:'12px',overflowX:'auto'}});
+    a.by_month.forEach(function(m){ row.appendChild($('div',{class:'center',style:{minWidth:'42px',flex:'1'}},
+      $('div',{style:{height:(m.n/tmax*120)+'px',background:'var(--blue)',borderRadius:'5px 5px 0 0'}}),
+      $('div',{class:'small muted',style:{marginTop:'6px',whiteSpace:'nowrap'}},dash(m.month)),
+      $('div',{class:'small',style:{fontWeight:'700'}},String(m.n)) )); });
+    trend.appendChild(row);
+  } else trend.appendChild(emptyState('-'));
+  content.appendChild(trend);
+  // owners + top anchors
+  var ownerItems=a.top_owners.map(function(o){return {label:o.owner,n:o.n};});
+  var anchorCard=$('div',{class:'card pad'}, $('strong',null,'Top anchor texts'));
+  if(a.top_anchors.length) a.top_anchors.forEach(function(x){ anchorCard.appendChild($('div',{class:'row between',style:{padding:'6px 0',borderBottom:'1px solid #f0f2f8'}}, $('span',{class:'small'},dash(x.a)), $('span',{class:'chip'},String(x.n)))); });
+  else anchorCard.appendChild($('div',{class:'muted'},'-'));
+  content.appendChild($('div',{class:'grid',style:{gridTemplateColumns:'1fr 1fr',marginTop:'14px'}},
+    barCard('Links by owner',ownerItems,'var(--navy)'), anchorCard));
+}
+function mini(label,val){ return $('div',{class:'card pad',style:{boxShadow:'none',border:'1px solid var(--line)'}}, $('div',{class:'label muted small'},label), $('div',{style:{fontSize:'22px',fontWeight:'700'}},String(val))); }
+
+/* ============================ Link Health ============================ */
+async function pageHealth(content){
+  clr(content);
+  // Link-health status summary (#12): live / lost / removed / pending
+  var sumRow=$('div',{class:'grid kpis',style:{marginBottom:'14px'}});
+  content.appendChild(sumRow);
+  (async function(){
+    try{
+      var s=await api('link-health/summary');
+      function box(label,val,cls){ return $('div',{class:'card pad'}, $('div',{class:'label muted small'},label),
+        $('div',{style:{fontSize:'24px',fontWeight:'700'}}, $('span',{class:'badge '+cls,style:{fontSize:'18px'}}, String(val||0)))); }
+      sumRow.appendChild(box('Live links',s.live,'b-live'));
+      sumRow.appendChild(box('Lost',s.lost,'b-missing'));
+      sumRow.appendChild(box('Removed',s.removed,'b-missing'));
+      sumRow.appendChild(box('Pending',s.pending,'b-pending'));
+    }catch(e){ sumRow.appendChild($('div',{class:'muted small'},'Summary error: '+e.message)); }
+  })();
+  var runBtn=$('button',{class:'btn primary'},icon('health'),'Run link check');
+  var stateFilter='';
+  content.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}},
+    $('div',null,$('strong',null,'Live link verification'),$('div',{class:'muted small'},'Fetches each partner page and scans for your link/anchor. 404/410 = gone; blocked bodies are scanned.')),
+    runBtn));
+  var verdictRow=$('div',{class:'grid kpis',style:{marginBottom:'14px'}}); content.appendChild(verdictRow);
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function loadLinks(){
+    clr(card).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var qs=stateFilter?('?state='+stateFilter):'';
+    var d=await api('link-health/links'+qs);
+    var counts={alive:0,missing:0,unverifiable:0}; var all=await api('link-health/links'); all.rows.forEach(function(r){ if(counts[r.last_check_state]!=null)counts[r.last_check_state]++; });
+    clr(verdictRow);
+    [['alive','Alive','b-alive'],['missing','Missing','b-missing'],['unverifiable','Unverifiable','b-unverifiable'],['','All','']].forEach(function(v){
+      var box=$('div',{class:'card pad kpi'+(stateFilter===v[0]?'':''),style:stateFilter===v[0]?{borderColor:'var(--blue)'}:{}},
+        $('div',{class:'label'},v[1]), $('div',{class:'val'}, v[0]?String(counts[v[0]]||0):String(all.rows.length)));
+      box.addEventListener('click',function(){ stateFilter=v[0]; loadLinks(); }); verdictRow.appendChild(box);
+    });
+    clr(card);
+    if(!d.rows.length){ card.appendChild(emptyState(stateFilter?('No '+stateFilter+' links.'):'No checked links yet. Run a check.')); return; }
+    var csvBtn=$('button',{class:'btn sm',style:{margin:'10px'}},'Export CSV');
+    csvBtn.addEventListener('click',function(){ downloadCSV('link-health.csv', d.rows, ['prospect_domain','our_target_url','anchor_text','owner_name','last_check_state','verdict','last_checked_at']); });
+    var tbody=$('tbody');
+    d.rows.forEach(function(r){ tbody.appendChild($('tr',null,
+      $('td',null,$('strong',null,dash(r.prospect_domain))), $('td',null,$('div',{class:'small'},dash(r.our_target_url))),
+      $('td',null,dash(r.owner_name)), $('td',null,$('span',{class:'badge b-'+(r.last_check_state||'unverifiable')}, dash(r.last_check_state))),
+      $('td',null,$('span',{class:'small muted'},dash(r.verdict))), $('td',null,$('span',{class:'small muted'}, r.last_checked_at?new Date(r.last_checked_at).toLocaleString():'-')) )); });
+    card.appendChild(csvBtn);
+    card.appendChild($('div',{style:{overflowX:'auto'}},$('table',null,$('thead',null,$('tr',null,$('th',null,'Domain'),$('th',null,'Target'),$('th',null,'Owner'),$('th',null,'State'),$('th',null,'Verdict'),$('th',null,'Checked'))),tbody)));
+  }
+  runBtn.addEventListener('click',async function(){ runBtn.disabled=true; clr(runBtn).appendChild($('span',{class:'spin'})); try{ var r=await api('link-health/run',{method:'POST',body:{limit:40}}); toast('Checked '+r.checked+' links'); }catch(e){ toast(e.message,true);} runBtn.disabled=false; clr(runBtn); runBtn.appendChild(icon('health')); runBtn.appendChild(document.createTextNode('Run link check')); loadLinks(); });
+  loadLinks();
+}
+function downloadCSV(name, rows, cols){
+  var head=cols.join(','); var body=rows.map(function(r){ return cols.map(function(c){ var v=r[c]==null?'':String(r[c]).replace(/"/g,'""'); return '"'+v+'"'; }).join(','); }).join('\n');
+  var blob=new Blob([head+'\n'+body],{type:'text/csv'}); var a=$('a',{href:URL.createObjectURL(blob),download:name}); document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ============================ Pitch Pipeline ============================ */
+var pitchFilter={status:'',owner:'',pitch_type:''};
+async function pagePitch(content){
+  clr(content);
+  var statusSel=$('select',null,opt('','All stages'),opt('prospect','prospect'),opt('pitched','pitched'),opt('follow_up_1','follow up 1'),opt('replied','replied'),opt('negotiating','negotiating'),opt('won','won'),opt('published','published'),opt('rejected','rejected'),opt('no_response','no response'),opt('disqualified','disqualified')); statusSel.value=pitchFilter.status;
+  var typeSel=$('select',null,opt('','All types'),opt('guest_post','guest post'),opt('link_insert','link insert'),opt('niche_edit','niche edit'),opt('resource','resource'),opt('pr','PR')); typeSel.value=pitchFilter.pitch_type;
+  var addBtn=$('button',{class:'btn primary'},icon('plus'),'Add prospect');
+  addBtn.addEventListener('click',function(){ outreachForm(null,load); });
+  content.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('div',{class:'row'},statusSel,typeSel), addBtn));
+  var kpis=$('div',{class:'grid kpis',style:{marginBottom:'14px'}}); content.appendChild(kpis);
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function load(){
+    clr(card).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var qs=new URLSearchParams(); if(statusSel.value)qs.set('status',statusSel.value); if(typeSel.value)qs.set('pitch_type',typeSel.value);
+    var d=await api('outreach?'+qs.toString());
+    var all=(await api('outreach')).rows;
+    clr(kpis);
+    kpis.appendChild(mini('Qualified',all.filter(function(r){return r.qualified===true;}).length));
+    kpis.appendChild(mini('Disqualified',all.filter(function(r){return r.qualified===false;}).length));
+    kpis.appendChild(mini('Awaiting',all.filter(function(r){return ['pitched','follow_up_1','follow_up_2'].indexOf(r.outreach_status)>=0;}).length));
+    kpis.appendChild(mini('Won',all.filter(function(r){return ['won','published'].indexOf(r.outreach_status)>=0;}).length));
+    clr(card);
+    if(!d.rows.length){ card.appendChild(emptyState('No outreach rows. Add a prospect.')); return; }
+    var tbody=$('tbody');
+    d.rows.forEach(function(r){
+      var drBtn=$('button',{class:'btn sm'},'DR'); drBtn.addEventListener('click',async function(){ drBtn.disabled=true; try{ var a=await api('seo/ahrefs?domain='+encodeURIComponent(r.domain)); await api('outreach/'+r.id,{method:'PUT',body:{domain_rating:a.domain_rating,traffic:a.traffic}}); toast('DR '+dash(a.domain_rating)+', traffic '+fmtN(a.traffic)); load(); }catch(e){ toast(e.message,true); drBtn.disabled=false; } });
+      var sendBtn=$('button',{class:'btn sm primary'},'Send'); sendBtn.addEventListener('click',function(){ state.page='email'; state.emailPrefill={to_email:r.contact_email,outreach_id:r.id,domain:r.domain}; renderApp(); });
+      var statusEdit=$('select',null); ['prospect','pitched','follow_up_1','follow_up_2','replied','negotiating','won','published','rejected','no_response','disqualified'].forEach(function(s){ statusEdit.appendChild(opt(s,s.replace(/_/g,' '))); }); statusEdit.value=r.outreach_status; statusEdit.style.maxWidth='150px';
+      statusEdit.addEventListener('change',async function(){ await api('outreach/'+r.id,{method:'PUT',body:{outreach_status:statusEdit.value}}); toast('Updated'); });
+      tbody.appendChild($('tr',null,
+        $('td',null,$('strong',null,dash(r.domain))), $('td',null,$('span',{class:'chip'},dash(r.pitch_type))),
+        $('td',null,statusEdit), $('td',null,dash(r.contact_email)), $('td',null,dash(r.domain_rating)), $('td',null,fmtN(r.traffic)),
+        $('td',{class:'right nowrap'}, drBtn, ' ', sendBtn) ));
+    });
+    card.appendChild($('div',{style:{overflowX:'auto'}},$('table',null,$('thead',null,$('tr',null,$('th',null,'Domain'),$('th',null,'Pitch'),$('th',null,'Stage'),$('th',null,'Contact'),$('th',null,'DR'),$('th',null,'Traffic'),$('th',null,''))),tbody)));
+  }
+  statusSel.addEventListener('change',function(){pitchFilter.status=statusSel.value;load();}); typeSel.addEventListener('change',function(){pitchFilter.pitch_type=typeSel.value;load();});
+  load();
+}
+function outreachForm(existing,onDone){
+  var b=existing||{}; var dom=$('input',{value:b.domain||'',placeholder:'example.com'}), email=$('input',{value:b.contact_email||'',placeholder:'name@domain.com'}), owner=$('input',{value:b.owner_name||'',placeholder:'owner'});
+  var typeSel=$('select',null,opt('guest_post','guest post'),opt('link_insert','link insert'),opt('niche_edit','niche edit'),opt('resource','resource'),opt('pr','PR')); typeSel.value=b.pitch_type||'guest_post';
+  var save=$('button',{class:'btn primary'},'Save');
+  var m=modal(existing?'Edit prospect':'Add outreach prospect',$('div',null,field('Domain *',dom),field('Pitch type',typeSel),field('Contact email',email),field('Owner',owner)),[save]);
+  save.addEventListener('click',async function(){ if(!dom.value){toast('Domain required',true);return;} var body={domain:dom.value,pitch_type:typeSel.value,contact_email:email.value,owner_name:owner.value}; if(existing) await api('outreach/'+existing.id,{method:'PUT',body:body}); else await api('outreach',{method:'POST',body:body}); m.close(); toast('Saved'); onDone&&onDone(); });
+}
+
+/* ============================ Email Sender ============================ */
+async function pageEmail(content){
+  clr(content);
+  var status=await api('integrations/status');
+  var pre=state.emailPrefill||{}; state.emailPrefill=null;
+  if(!status.gmail.configured) content.appendChild(noteCard('Gmail is not configured. Add GOOGLE_CLIENT_ID/SECRET and GOOGLE_REDIRECT_URI, then connect.'));
+  else if(!status.gmail.connected){ var c=$('button',{class:'btn primary'},'Connect Gmail'); c.addEventListener('click',async function(){ var u=await api('google/auth-url?for=gmail'); window.location.href=u.url; }); content.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('div',null,$('strong',null,'Connect Gmail to send'),$('div',{class:'muted small'},'You will authorize once; tokens are stored server-side.')), c)); }
+  // 3-step: prepare
+  var to=$('input',{value:pre.to_email||'',placeholder:'recipient@domain.com'}), subj=$('input',{placeholder:'Subject'}), body=$('textarea',{rows:'7',placeholder:'Write your pitch...'});
+  var queueBtn=$('button',{class:'btn'},'1. Queue'), sendList=$('div');
+  var prep=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Prepare email'+(pre.domain?(' to '+pre.domain):'')), field('To',to), field('Subject',subj), field('Body',body), queueBtn);
+  content.appendChild(prep);
+  var qCard=$('div',{class:'card'}, $('div',{class:'pad'},$('strong',null,'Queue'))); content.appendChild(qCard); var qBody=$('div'); qCard.appendChild(qBody);
+  queueBtn.addEventListener('click',async function(){ if(!to.value||!subj.value){toast('To and subject required',true);return;} await api('email/queue',{method:'POST',body:{to_email:to.value,subject:subj.value,body:body.value,outreach_id:pre.outreach_id||null}}); toast('Queued'); to.value='';subj.value='';body.value=''; loadQueue(); });
+  async function loadQueue(){
+    clr(qBody).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var d=await api('email/queue'); clr(qBody);
+    if(!d.rows.length){ qBody.appendChild(emptyState('Queue is empty.')); return; }
+    var tbody=$('tbody');
+    d.rows.forEach(function(r){
+      var sendBtn=$('button',{class:'btn sm primary'},'2/3. Send');
+      if(r.status==='sent') sendBtn=$('span',{class:'badge b-live'},'sent'); else if(r.status==='failed') sendBtn=$('span',{class:'badge b-missing',title:r.error||''},'failed');
+      else sendBtn.addEventListener('click',async function(){ sendBtn.disabled=true; try{ await api('email/send/'+r.id,{method:'POST'}); toast('Sent'); }catch(e){ toast(e.message,true);} loadQueue(); });
+      tbody.appendChild($('tr',null,$('td',null,dash(r.to_email)),$('td',null,dash(r.subject)),$('td',null,$('span',{class:'small muted'},new Date(r.created_at).toLocaleString())),$('td',{class:'right'},sendBtn)));
+    });
+    qBody.appendChild($('div',{style:{overflowX:'auto'}},$('table',null,$('thead',null,$('tr',null,$('th',null,'To'),$('th',null,'Subject'),$('th',null,'Created'),$('th',null,''))),tbody)));
+  }
+  loadQueue();
+}
+function noteCard(text){ return $('div',{class:'card pad',style:{marginBottom:'14px',borderLeft:'3px solid var(--warn)'}}, $('span',{class:'muted'},text)); }
+
+/* ============================ LinkedIn ============================ */
+async function pageLinkedIn(content){
+  clr(content);
+  content.appendChild(noteCard('LinkedIn actions are never automated (permanent-ban risk). Use "Find" to open a search, then connect/message manually.'));
+  var addBtn=$('button',{class:'btn primary'},icon('plus'),'Add follow-up');
+  addBtn.addEventListener('click',function(){ liForm(load); });
+  content.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('strong',null,'Follow-ups'), addBtn));
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function load(){
+    clr(card).appendChild($('div',{class:'pad muted'},'Loading...'));
+    var d=await api('linkedin/followups'); clr(card);
+    if(!d.rows.length){ card.appendChild(emptyState('No follow-ups yet.')); return; }
+    var tbody=$('tbody');
+    d.rows.forEach(function(r){
+      var find=$('button',{class:'btn sm'},icon('search'),'Find'); find.addEventListener('click',async function(){ var u=await api('linkedin/find-url?q='+encodeURIComponent(r.person_name+' '+(r.company||''))); window.open(r.profile_url||u.url,'_blank'); });
+      var st=$('select',null); ['to_contact','connected','messaged','replied','done'].forEach(function(s){ st.appendChild(opt(s,s.replace(/_/g,' '))); }); st.value=r.status; st.style.maxWidth='140px';
+      st.addEventListener('change',async function(){ await api('linkedin/followups/'+r.id,{method:'PUT',body:{status:st.value}}); toast('Updated'); });
+      tbody.appendChild($('tr',null,$('td',null,$('strong',null,dash(r.person_name))),$('td',null,dash(r.company)),$('td',null,st),$('td',null,dash(r.owner_name)),$('td',{class:'right'},find)));
+    });
+    card.appendChild($('div',{style:{overflowX:'auto'}},$('table',null,$('thead',null,$('tr',null,$('th',null,'Person'),$('th',null,'Company'),$('th',null,'Status'),$('th',null,'Owner'),$('th',null,''))),tbody)));
+  }
+  load();
+}
+function liForm(onDone){
+  var name=$('input',{placeholder:'Full name'}),co=$('input',{placeholder:'Company'}),url=$('input',{placeholder:'Profile URL (optional)'}),owner=$('input',{placeholder:'Owner'});
+  var save=$('button',{class:'btn primary'},'Add');
+  var m=modal('Add LinkedIn follow-up',$('div',null,field('Person *',name),field('Company',co),field('Profile URL',url),field('Owner',owner)),[save]);
+  save.addEventListener('click',async function(){ if(!name.value){toast('Name required',true);return;} await api('linkedin/followups',{method:'POST',body:{person_name:name.value,company:co.value,profile_url:url.value,owner_name:owner.value}}); m.close(); toast('Added'); onDone&&onDone(); });
+}
+
+/* ============================ Members + Reminders ============================ */
+async function pageMembers(content){
+  clr(content);
+  // Per-member link-exchange analytics (#16)
+  var statsCard=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Link exchanges per member'));
+  content.appendChild(statsCard);
+  (async function(){
+    try{
+      var st=await api('members/stats');
+      var tbody=$('tbody');
+      st.rows.forEach(function(r){ tbody.appendChild($('tr',null,
+        $('td',null,$('strong',null,dash(r.owner))),
+        $('td',{class:'center'},String(r.total)),
+        $('td',{class:'center'},String(r.this_month)),
+        $('td',{class:'center'},String(r.prev_month)),
+        $('td',{class:'center'},$('span',{class:'badge b-live'},String(r.live))),
+        $('td',{class:'center'},$('span',{class:'badge b-missing'},String(r.lost))),
+        $('td',{class:'center'},$('span',{class:'badge b-pending'},String(r.pending))) )); });
+      statsCard.appendChild($('div',{style:{overflowX:'auto',marginTop:'10px'}}, $('table',null,
+        $('thead',null,$('tr',null,$('th',null,'Member'),$('th',{class:'center'},'Total'),$('th',{class:'center'},st.this_month),$('th',{class:'center'},st.prev_month),$('th',{class:'center'},'Live'),$('th',{class:'center'},'Lost'),$('th',{class:'center'},'Pending'))),
+        tbody)));
+    }catch(e){ statsCard.appendChild($('div',{class:'muted small'},'Stats load error: '+e.message)); }
+  })();
+  var name=$('input',{placeholder:'Name',style:{maxWidth:'200px'}}),role=$('input',{placeholder:'Role',style:{maxWidth:'160px'}});
+  var add=$('button',{class:'btn primary'},icon('plus'),'Add'); 
+  add.addEventListener('click',async function(){ if(!name.value){toast('Name required',true);return;} await api('members',{method:'POST',body:{name:name.value,role:role.value}}); name.value='';role.value=''; load(); });
+  content.appendChild($('div',{class:'card pad row',style:{marginBottom:'14px'}},name,role,add));
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function load(){ clr(card).appendChild($('div',{class:'pad muted'},'Loading...')); var d=await api('members'); clr(card);
+    if(!d.rows.length){ card.appendChild(emptyState('No members yet.')); return; }
+    var tbody=$('tbody'); d.rows.forEach(function(r){ var del=$('button',{class:'btn sm danger'},icon('trash')); del.addEventListener('click',async function(){ await api('members/'+r.id,{method:'DELETE'}); load(); }); tbody.appendChild($('tr',null,$('td',null,$('strong',null,dash(r.name))),$('td',null,dash(r.role)),$('td',{class:'right'},del))); });
+    card.appendChild($('table',null,$('thead',null,$('tr',null,$('th',null,'Name'),$('th',null,'Role'),$('th',null,''))),tbody)); }
+  load();
+}
+async function pageReminders(content){
+  clr(content);
+  var title=$('input',{placeholder:'Reminder...',style:{maxWidth:'260px'}}),due=$('input',{type:'date',style:{maxWidth:'160px'}}),owner=$('input',{placeholder:'Owner',style:{maxWidth:'140px'}});
+  var notify=$('input',{type:'checkbox'}); var notifyWrap=$('label',{class:'row small muted',style:{gap:'6px',cursor:'pointer'}}, notify, 'Email me');
+  var add=$('button',{class:'btn primary'},icon('plus'),'Add');
+  add.addEventListener('click',async function(){ if(!title.value){toast('Title required',true);return;} var r=await api('reminders',{method:'POST',body:{title:title.value,due_date:due.value||null,owner_name:owner.value,notify:notify.checked}}); title.value='';due.value=''; toast(notify.checked?(r.emailed?'Added + emailed you':'Added (email queued; connect Gmail to send)'):'Added'); load(); });
+  content.appendChild($('div',{class:'card pad row',style:{marginBottom:'14px'}},title,due,owner,notifyWrap,add));
+  var card=$('div',{class:'card'}); content.appendChild(card);
+  async function load(){ clr(card).appendChild($('div',{class:'pad muted'},'Loading...')); var d=await api('reminders'); clr(card);
+    state.reminders=d.rows.filter(function(r){return !r.done;}).length;
+    if(!d.rows.length){ card.appendChild(emptyState('No reminders.')); return; }
+    var tbody=$('tbody'); d.rows.forEach(function(r){ var cb=$('input',{type:'checkbox'}); cb.checked=r.done; cb.addEventListener('change',async function(){ await api('reminders/'+r.id,{method:'PUT',body:{done:cb.checked}}); load(); });
+      var del=$('button',{class:'btn sm danger'},icon('trash')); del.addEventListener('click',async function(){ await api('reminders/'+r.id,{method:'DELETE'}); load(); });
+      tbody.appendChild($('tr',null,$('td',null,cb),$('td',null,$('span',{style:r.done?{textDecoration:'line-through',color:'var(--muted)'}:{}}, dash(r.title))),$('td',null,dash(r.due_date)),$('td',null,dash(r.owner_name)),$('td',{class:'right'},del))); });
+    card.appendChild($('table',null,$('thead',null,$('tr',null,$('th',null,''),$('th',null,'Task'),$('th',null,'Due'),$('th',null,'Owner'),$('th',null,''))),tbody)); }
+  load();
+}
+/* ============================ parsing utils ============================ */
+function readFileSmart(file){
+  return new Promise(function(resolve,reject){
+    var fr=new FileReader();
+    fr.onload=function(){
+      var buf=new Uint8Array(fr.result);
+      // UTF-16 BOM detection
+      if(buf.length>=2 && ((buf[0]===0xFF&&buf[1]===0xFE)||(buf[0]===0xFE&&buf[1]===0xFF))){
+        try{ resolve({text:new TextDecoder(buf[0]===0xFF?'utf-16le':'utf-16be').decode(buf),ext:ext(file.name)}); return; }catch(e){}
+      }
+      resolve({text:new TextDecoder('utf-8').decode(buf),ext:ext(file.name)});
+    };
+    fr.onerror=reject; fr.readAsArrayBuffer(file);
+  });
+}
+function ext(n){ var m=/\.([a-z0-9]+)$/i.exec(n||''); return m?m[1].toLowerCase():''; }
+function parseDelimited(text){
+  var delim = (text.indexOf('\t')>=0 && (text.split('\t').length>text.split(',').length))?'\t':',';
+  var rows=[]; var i=0,field='',row=[],inq=false;
+  while(i<text.length){ var c=text[i];
+    if(inq){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inq=false; } else field+=c; }
+    else { if(c==='"') inq=true; else if(c===delim){ row.push(field);field=''; } else if(c==='\n'){ row.push(field);rows.push(row);row=[];field=''; } else if(c==='\r'){} else field+=c; }
+    i++;
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(function(r){ return r.some(function(x){return String(x).trim()!=='';}); });
+}
+function loadSheetJS(){
+  return new Promise(function(resolve,reject){
+    if(window.XLSX) return resolve(window.XLSX);
+    var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=function(){ resolve(window.XLSX); }; s.onerror=function(){ reject(new Error('Could not load XLSX parser. Export the sheet as CSV instead.')); };
+    document.head.appendChild(s);
+  });
+}
+async function fileToRows(file){
+  var e=ext(file.name);
+  if(e==='xlsx'||e==='xls'){ var XLSX=await loadSheetJS(); var data=new Uint8Array(await file.arrayBuffer()); var wb=XLSX.read(data,{type:'array'}); var ws=wb.Sheets[wb.SheetNames[0]]; return XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); }
+  var r=await readFileSmart(file); return parseDelimited(r.text);
+}
+function findCol(headers,cands){ var lc=headers.map(function(h){return String(h).toLowerCase().trim();}); for(var i=0;i<cands.length;i++){ var idx=lc.indexOf(cands[i]); if(idx>=0)return idx; } for(var j=0;j<lc.length;j++){ for(var k=0;k<cands.length;k++){ if(lc[j].indexOf(cands[k])>=0)return j; } } return -1; }
+
+/* ============================ SEO Tools ============================ */
+async function pageTools(content){
+  clr(content);
+  var status=await api('integrations/status');
+  // Unified tools/integrations status hub (#17) - data + actions in-tool, no redirect
+  var hub=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Connected tools'), $('div',{class:'muted small',style:{margin:'4px 0 12px'}},'Every tool in one place. Data and actions run inside the dashboard.'));
+  hub.appendChild(integrationsGrid(status));
+  content.appendChild(hub);
+
+  // --- Meta (Facebook + Instagram) panel ---
+  var meta=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Facebook & Instagram'));
+  if(!status.facebook.connected){
+    meta.appendChild($('div',{class:'muted small',style:{marginTop:'6px'}}, status.facebook.configured
+      ? 'Not connected yet. Use the Connect button on the Facebook card above (it also links Instagram).'
+      : 'Not configured. Add FACEBOOK_APP_ID, FACEBOOK_APP_SECRET and FACEBOOK_REDIRECT_URI in Render.'));
+  } else {
+    var fbBox=$('div',{style:{marginTop:'10px'}}, $('div',{class:'muted small'},'Loading Page insights...'));
+    meta.appendChild(fbBox);
+    api('facebook/insights').then(function(d){ clr(fbBox);
+      var pg=d.page||{};
+      fbBox.appendChild($('div',{class:'grid kpis'},
+        mini('Page', dash(d.page_name||pg.name)),
+        mini('Followers', pg.followers_count!=null?fmtN(pg.followers_count):(pg.fan_count!=null?fmtN(pg.fan_count):'-'))));
+    }).catch(function(e){ clr(fbBox).appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'FB insights: '+e.message)); });
+
+    // Facebook post box (text + optional link)
+    var msg=$('textarea',{placeholder:'Write a post for the Facebook Page...',style:{width:'100%',minHeight:'72px',marginTop:'10px'}});
+    var lnk=$('input',{placeholder:'Optional link (e.g. a blog URL)',style:{width:'100%',marginTop:'8px'}});
+    var postBtn=$('button',{class:'btn primary',style:{marginTop:'8px'}},'Post to Facebook Page');
+    var postOut=$('div',{class:'small',style:{marginTop:'6px'}});
+    postBtn.addEventListener('click',async function(){ if(!msg.value.trim()&&!lnk.value.trim()){toast('Write something or add a link',true);return;}
+      postBtn.disabled=true; clr(postOut).appendChild($('span',{class:'muted'},'Posting...'));
+      try{ var r=await api('facebook/publish',{method:'POST',body:{message:msg.value.trim(),link:lnk.value.trim()}}); clr(postOut).appendChild($('span',{style:{color:'var(--ok)'}},'Posted. ID: '+r.post_id)); msg.value=''; lnk.value=''; }
+      catch(e){ clr(postOut).appendChild($('span',{style:{color:'var(--bad)'}},e.message)); } postBtn.disabled=false; });
+    meta.appendChild(msg); meta.appendChild(lnk); meta.appendChild(postBtn); meta.appendChild(postOut);
+
+    // Instagram (only if linked)
+    if(status.instagram.connected){
+      var igBox=$('div',{style:{marginTop:'14px',paddingTop:'12px',borderTop:'1px solid var(--line)'}}, $('strong',null,'Instagram'), $('div',{class:'muted small'},'Loading...'));
+      meta.appendChild(igBox);
+      api('instagram/insights').then(function(d){ var ig=d.ig||{}; clr(igBox); igBox.appendChild($('strong',null,'Instagram'));
+        igBox.appendChild($('div',{class:'grid kpis',style:{marginTop:'6px'}},
+          mini('Username', dash(ig.username)), mini('Followers', ig.followers_count!=null?fmtN(ig.followers_count):'-'), mini('Posts', ig.media_count!=null?fmtN(ig.media_count):'-')));
+        igBox.appendChild($('div',{class:'muted small',style:{marginTop:'8px'}},'Instagram publishing requires a public image URL. Use the API endpoint /api/instagram/publish with image_url + caption.'));
+      }).catch(function(e){ clr(igBox).appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'IG: '+e.message)); });
+    } else {
+      meta.appendChild($('div',{class:'muted small',style:{marginTop:'12px'}},'No Instagram business account is linked to this Page. Link it in Facebook Page settings, then reconnect.'));
+    }
+  }
+  content.appendChild(meta);
+  // --- lookup ---
+  var domInp=$('input',{placeholder:'example.com',style:{maxWidth:'260px'}});
+  var lookBtn=$('button',{class:'btn primary'},icon('search'),'Lookup');
+  var result=$('div',{style:{marginTop:'12px'}});
+  lookBtn.addEventListener('click',async function(){ if(!domInp.value){toast('Enter a domain',true);return;} lookBtn.disabled=true; clr(result).appendChild($('div',{class:'muted'},'Looking up...'));
+    try{ var d=await api('seo/qualify?domain='+encodeURIComponent(domInp.value)); clr(result);
+      result.appendChild($('div',{class:'grid kpis'},
+        mini('Ahrefs DR', d.ahrefs&&d.ahrefs.domain_rating!=null?d.ahrefs.domain_rating:'-'),
+        mini('Ahrefs traffic', d.ahrefs?fmtN(d.ahrefs.traffic):'-'),
+        mini('Moz DA', d.moz&&d.moz.domain_authority!=null?d.moz.domain_authority:'-'),
+        mini('Qualified', d.qualified===true?'Yes':(d.qualified===false?'No':'-'))));
+      result.appendChild($('div',{class:'muted small',style:{marginTop:'8px'}}, 'Gate: DR >= '+d.min_dr+' and traffic >= '+fmtN(d.min_traffic)+'. '+dash(d.reason)));
+      if(d.ahrefs_error) result.appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'Ahrefs: '+d.ahrefs_error));
+      if(d.moz_error) result.appendChild($('div',{class:'small',style:{color:'var(--bad)'}},'Moz: '+d.moz_error));
+    }catch(e){ clr(result).appendChild($('div',{style:{color:'var(--bad)'}},e.message)); } lookBtn.disabled=false; });
+  content.appendChild($('div',{class:'card pad',style:{marginBottom:'14px'}},
+    $('strong',null,'Domain lookup (Ahrefs DR/traffic + Moz DA/PA)'),
+    $('div',{class:'muted small',style:{margin:'4px 0 10px'}}, 'Ahrefs '+(status.ahrefs.configured?'configured':'NOT configured')+' - Moz '+(status.moz.configured?'configured':'NOT configured')+'. Keys are set in env vars.'),
+    $('div',{class:'row'},domInp,lookBtn), result));
+  // --- GSC connect ---
+  var gscCard=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Google Search Console'));
+  if(!status.gsc.configured) gscCard.appendChild($('div',{class:'muted small',style:{marginTop:'6px'}},'Not configured. Add GOOGLE_CLIENT_ID/SECRET, GSC_REDIRECT_URI and GSC_SITE_URL.'));
+  else if(!status.gsc.connected){ var cb=$('button',{class:'btn primary',style:{marginTop:'8px'}},'Connect Search Console'); cb.addEventListener('click',async function(){ var u=await api('google/auth-url?for=gsc'); window.location.href=u.url; }); gscCard.appendChild(cb); }
+  else { var sumBtn=$('button',{class:'btn',style:{marginTop:'8px'}},'Pull GSC summary'); var sumOut=$('div',{style:{marginTop:'10px'}}); sumBtn.addEventListener('click',async function(){ sumBtn.disabled=true; try{ var s=await api('google/gsc-summary'); clr(sumOut).appendChild($('div',{class:'grid kpis'},mini('Clicks',fmtN(s.clicks)),mini('Impressions',fmtN(s.impressions)),mini('CTR',s.ctr+'%'),mini('Avg position',dash(s.position)))); }catch(e){ clr(sumOut).appendChild($('div',{style:{color:'var(--bad)'}},e.message)); } sumBtn.disabled=false; }); gscCard.appendChild(sumBtn); gscCard.appendChild(sumOut); }
+  content.appendChild(gscCard);
+  // --- data import ---
+  content.appendChild(importCard());
+}
+function importCard(){
+  var card=$('div',{class:'card pad'}, $('strong',null,'Data import (CSV / XLSX)'), $('div',{class:'muted small',style:{margin:'4px 0 10px'}},'Upload your backlink sheet. Map columns to fields, preview, then import into Exchanges.'));
+  var fileInp=$('input',{type:'file',accept:'.csv,.tsv,.xlsx,.xls'});
+  var area=$('div',{style:{marginTop:'12px'}});
+  card.appendChild(fileInp); card.appendChild(area);
+  var FIELDS=[['prospect_domain','Prospect domain *'],['our_target_url','Our target URL'],['anchor_text','Anchor text'],['link_type','Link type'],['domain_rating','Domain rating'],['owner_name','Owner'],['website_name','Website'],['status','Status'],['month_label','Month label'],['contact_email','Contact email'],['notes','Notes']];
+  fileInp.addEventListener('change',async function(){
+    var file=fileInp.files[0]; if(!file)return; clr(area).appendChild($('div',{class:'muted'},'Parsing...'));
+    try{
+      var rows=await fileToRows(file);
+      if(rows.length<2){ clr(area).appendChild($('div',{style:{color:'var(--bad)'}},'File has no data rows.')); return; }
+      var headers=rows[0].map(function(h){return String(h);});
+      var dataRows=rows.slice(1);
+      clr(area);
+      // auto-map
+      var map={}; var guesses={prospect_domain:['domain','prospect','website','url','site'],our_target_url:['target','our url','our target'],anchor_text:['anchor'],link_type:['type','follow'],domain_rating:['dr','rating','da','authority'],owner_name:['owner','assigned'],website_name:['website name','brand'],status:['status'],month_label:['month'],contact_email:['email','contact']};
+      var mapWrap=$('div',{class:'grid',style:{gridTemplateColumns:'1fr 1fr',gap:'8px'}});
+      FIELDS.forEach(function(f){
+        var sel=$('select',null,opt('','- skip -')); headers.forEach(function(h,idx){ sel.appendChild(opt(String(idx),h||('Col '+(idx+1))) ); });
+        var g=guesses[f[0]]; if(g){ var idx=findCol(headers,g); if(idx>=0) sel.value=String(idx); }
+        map[f[0]]=sel; mapWrap.appendChild($('div',null,$('label',{class:'fld'},f[1]),sel));
+      });
+      var preview=$('div',{class:'muted small',style:{margin:'10px 0'}}, dataRows.length+' data rows detected.');
+      var importBtn=$('button',{class:'btn primary'},'Import '+dataRows.length+' rows');
+      importBtn.addEventListener('click',async function(){
+        var pdIdx=map.prospect_domain.value; if(pdIdx===''){ toast('Map the prospect domain column',true); return; }
+        var payload=dataRows.map(function(r){ var o={}; FIELDS.forEach(function(f){ var idx=map[f[0]].value; if(idx!=='') o[f[0]]=r[parseInt(idx,10)]; }); return o; }).filter(function(o){return o.prospect_domain && String(o.prospect_domain).trim();});
+        importBtn.disabled=true; clr(importBtn).appendChild($('span',{class:'spin'}));
+        try{ var res=await api('import',{method:'POST',body:{rows:payload}}); toast('Imported '+res.inserted+' exchanges'); clr(area); fileInp.value=''; }catch(e){ toast(e.message,true); importBtn.disabled=false; clr(importBtn).appendChild(document.createTextNode('Import')); }
+      });
+      area.appendChild($('div',null, $('div',{class:'muted small',style:{marginBottom:'6px'}},'Map your columns:'), mapWrap, preview, importBtn));
+    }catch(e){ clr(area).appendChild($('div',{style:{color:'var(--bad)'}},e.message)); }
+  });
+  return card;
+}
+/* ============================ GEO / AI Visibility ============================ */
+function tabBar(tabs, current, onPick){
+  var bar=$('div',{class:'tabs'});
+  tabs.forEach(function(t){ var el=$('div',{class:'tab'+(current===t[0]?' active':'')}, t[1]); el.addEventListener('click',function(){ onPick(t[0]); }); bar.appendChild(el); });
+  return bar;
+}
+async function pageGeo(content){
+  clr(content);
+  var tabs=[['overview','Overview'],['auditor','Auditor'],['spy','AI-Search Spy'],['diagnoser','Diagnoser'],['fixer','Fixer'],['report','Live Report']];
+  content.appendChild(tabBar(tabs,state.geoTab,function(t){ state.geoTab=t; pageGeo(content); }));
+  var box=$('div'); content.appendChild(box);
+  if(state.geoTab==='overview') return geoOverview(box);
+  if(state.geoTab==='auditor') return geoAuditor(box);
+  if(state.geoTab==='spy') return geoSpy(box);
+  if(state.geoTab==='diagnoser') return geoDiagnoser(box);
+  if(state.geoTab==='fixer') return geoFixer(box);
+  if(state.geoTab==='report') return geoReport(box);
+}
+async function geoOverview(box){
+  clr(box);
+  var addBtn=$('button',{class:'btn primary'},icon('plus'),'Add snapshot');
+  addBtn.addEventListener('click',function(){ geoSnapshotForm(function(){ geoOverview(box); }); });
+  box.appendChild($('div',{class:'row between',style:{marginBottom:'12px'}}, $('div',{class:'muted small'},'Daily GSC + GEO metrics. Cron upserts with COALESCE so a ping never wipes real numbers.'), addBtn));
+  var d=await api('geo/snapshots'); var rows=d.rows.slice().reverse();
+  if(!rows.length){ box.appendChild($('div',{class:'card'},emptyState('No snapshots yet. Add one or connect Search Console.'))); return; }
+  var metric='clicks'; var sel=$('select',null,opt('clicks','Clicks'),opt('impressions','Impressions'),opt('avg_position','Avg position'),opt('keywords_top10','Keywords top 10'),opt('geo_score','GEO score'),opt('ai_citations','AI citations')); sel.style.maxWidth='180px';
+  var chart=$('div',{class:'card pad'});
+  function draw(){ clr(chart).appendChild($('div',{class:'row between'},$('strong',null,'Trend'),sel));
+    var vals=rows.map(function(r){return Number(r[metric]||0);}); var max=Math.max.apply(null,vals)||1;
+    var rowEl=$('div',{class:'row',style:{alignItems:'flex-end',gap:'6px',height:'170px',marginTop:'14px'}});
+    rows.forEach(function(r,i){ var v=Number(r[metric]||0); rowEl.appendChild($('div',{class:'center',style:{flex:'1'},title:(r.snapshot_date+': '+v)}, $('div',{style:{height:(v/max*140)+'px',background:'var(--blue)',borderRadius:'4px 4px 0 0'}}))); });
+    chart.appendChild(rowEl);
+    chart.appendChild($('div',{class:'small muted',style:{marginTop:'6px'}}, rows.length+' snapshots - '+rows[0].snapshot_date+' to '+rows[rows.length-1].snapshot_date)); }
+  sel.addEventListener('change',function(){ metric=sel.value; draw(); }); draw();
+  box.appendChild(chart);
+  var latest=rows[rows.length-1];
+  box.appendChild($('div',{class:'grid kpis',style:{marginTop:'14px'}}, mini('Clicks',fmtN(latest.clicks)),mini('Impressions',fmtN(latest.impressions)),mini('GEO score',dash(latest.geo_score)),mini('AI citations',dash(latest.ai_citations))));
+}
+function geoSnapshotForm(onDone){
+  var fields={}; function n(k,ph){ var e=$('input',{placeholder:ph}); fields[k]=e; return e; }
+  var date=$('input',{type:'date',value:new Date().toISOString().slice(0,10)}); fields.snapshot_date=date;
+  var pull=$('button',{class:'btn sm'},'Pull from Search Console');
+  pull.addEventListener('click',async function(){ pull.disabled=true; try{ var s=await api('google/gsc-summary'); fields.clicks.value=s.clicks; fields.impressions.value=s.impressions; fields.avg_position.value=s.position; fields.keywords_top10.value=s.keywords_top10; toast('Autofilled from GSC'); }catch(e){ toast(e.message,true);} pull.disabled=false; });
+  var save=$('button',{class:'btn primary'},'Save snapshot');
+  var m=modal('Add GEO snapshot', $('div',null,
+    $('div',{class:'row between',style:{marginBottom:'8px'}}, field('Date',date), pull),
+    $('div',{class:'row'},$('div',{style:{flex:1}},field('Clicks',n('clicks','clicks'))),$('div',{style:{flex:1}},field('Impressions',n('impressions','impr')))),
+    $('div',{class:'row'},$('div',{style:{flex:1}},field('Avg position',n('avg_position','pos'))),$('div',{style:{flex:1}},field('Keywords top 10',n('keywords_top10','kw')))),
+    $('div',{class:'row'},$('div',{style:{flex:1}},field('GEO score',n('geo_score','0-100'))),$('div',{style:{flex:1}},field('AI citations',n('ai_citations','count')))) ),[save]);
+  save.addEventListener('click',async function(){ var body={}; for(var k in fields){ var v=fields[k].value; if(v!=='') body[k]= k==='snapshot_date'?v:Number(v); } await api('geo/snapshots',{method:'POST',body:body}); m.close(); toast('Saved'); onDone&&onDone(); });
+}
+async function geoAuditor(box){
+  clr(box);
+  var audit=await api('geo/audit'); var a=audit.row||{};
+  var urlInp=$('input',{placeholder:'https://yoursite.com (or set PAGESPEED_URL)',style:{maxWidth:'360px'}});
+  var run=$('button',{class:'btn primary'},'Run PageSpeed');
+  var out=$('div',{style:{marginTop:'10px'}});
+  run.addEventListener('click',async function(){ run.disabled=true; clr(out).appendChild($('div',{class:'muted'},'Running mobile performance audit...')); try{ var p=await api('geo/pagespeed',{method:'POST',body:{url:urlInp.value||null}}); clr(out).appendChild($('div',{class:'grid kpis'},mini('Performance',p.score),mini('LCP (s)',dash(p.lcp_seconds)),mini('URL tested','-'))); out.appendChild($('div',{class:'small muted',style:{marginTop:'6px'}},p.url)); }catch(e){ clr(out).appendChild($('div',{style:{color:'var(--bad)'}},e.message)); } run.disabled=false; geoAuditor(box); });
+  box.appendChild($('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Tech health'),
+    $('div',{class:'grid kpis',style:{margin:'10px 0'}}, mini('Tech health',dash(a.tech_health)),mini('Pages indexed',dash(a.pages_indexed)),mini('LCP (s)',dash(a.lcp_seconds)),mini('Source',dash(a.source))),
+    $('div',{class:'row'},urlInp,run), out));
+  // issues
+  var issuesCard=$('div',{class:'card pad'}, $('div',{class:'row between'},$('strong',null,'Issues'), (function(){ var b=$('button',{class:'btn sm'},icon('plus'),'Add'); b.addEventListener('click',function(){ var t=$('input',{placeholder:'Issue title'}),det=$('textarea',{rows:'2',placeholder:'Detail'}),sev=$('select',null,opt('high','high'),opt('medium','medium'),opt('low','low')); var s=$('button',{class:'btn primary'},'Add'); var m=modal('Add issue',$('div',null,field('Severity',sev),field('Title',t),field('Detail',det)),[s]); s.addEventListener('click',async function(){ if(!t.value){toast('Title required',true);return;} await api('geo/audit-issues',{method:'POST',body:{severity:sev.value,title:t.value,detail:det.value}}); m.close(); geoAuditor(box); }); }); return b; })()));
+  var iss=await api('geo/audit-issues');
+  if(!iss.rows.length) issuesCard.appendChild(emptyState('No issues logged.'));
+  else iss.rows.forEach(function(r){ var del=$('button',{class:'btn sm danger'},icon('trash')); del.addEventListener('click',async function(){ await api('geo/audit-issues/'+r.id,{method:'DELETE'}); geoAuditor(box); }); issuesCard.appendChild($('div',{class:'row between',style:{padding:'8px 0',borderBottom:'1px solid #f0f2f8'}}, $('div',null,$('span',{class:'badge '+(r.severity==='high'?'b-missing':r.severity==='medium'?'b-pending':'b-unverifiable')},dash(r.severity)),' ',$('strong',null,dash(r.title)),$('div',{class:'small muted'},dash(r.detail))), del)); });
+  box.appendChild(issuesCard);
+}
+async function geoSpy(box){
+  clr(box);
+  var add=$('button',{class:'btn sm primary'},icon('plus'),'Record citation');
+  add.addEventListener('click',function(){ var eng=$('select',null,opt('chatgpt','ChatGPT'),opt('perplexity','Perplexity'),opt('gemini','Gemini'),opt('ai_overviews','AI Overviews'),opt('copilot','Copilot')); var stt=$('select',null,opt('cited','cited'),opt('partial','partial'),opt('not_yet','not yet'),opt('unknown','unknown')); var q=$('input',{placeholder:'Query checked'}),dt=$('input',{type:'date',value:new Date().toISOString().slice(0,10)}); var s=$('button',{class:'btn primary'},'Save'); var m=modal('Record AI citation',$('div',null,field('Engine',eng),field('State',stt),field('Query',q),field('Checked on',dt)),[s]); s.addEventListener('click',async function(){ await api('geo/ai-citations',{method:'POST',body:{engine:eng.value,state:stt.value,query:q.value,checked_on:dt.value}}); m.close(); geoSpy(box); }); });
+  box.appendChild($('div',{class:'card pad row between',style:{marginBottom:'14px'}}, $('div',null,$('strong',null,'AI-Search Spy'),$('div',{class:'muted small'},'No API exists for AI citations - this grid stores findings you record from free AI-visibility checkers, with the date checked.')), add));
+  var d=await api('geo/ai-citations'); var card=$('div',{class:'card'});
+  if(!d.rows.length) card.appendChild(emptyState('No citations recorded yet.'));
+  else { var tbody=$('tbody'); d.rows.forEach(function(r){ var del=$('button',{class:'btn sm danger'},icon('trash')); del.addEventListener('click',async function(){ await api('geo/ai-citations/'+r.id,{method:'DELETE'}); geoSpy(box); }); var cls={cited:'b-live',partial:'b-pending',not_yet:'b-missing',unknown:'b-unverifiable'}[r.state]||'b-unverifiable'; tbody.appendChild($('tr',null,$('td',null,$('strong',null,dash(r.engine))),$('td',null,$('span',{class:'badge '+cls},dash(r.state))),$('td',null,dash(r.query)),$('td',null,dash(r.checked_on)),$('td',{class:'right'},del))); });
+    card.appendChild($('table',null,$('thead',null,$('tr',null,$('th',null,'Engine'),$('th',null,'State'),$('th',null,'Query'),$('th',null,'Checked'),$('th',null,''))),tbody)); }
+  box.appendChild(card);
+}
+async function geoDiagnoser(box){
+  clr(box);
+  async function section(kind,title,hint){
+    var add=$('button',{class:'btn sm primary'},icon('plus'),'Add');
+    add.addEventListener('click',function(){ var kw=$('input',{placeholder:'keyword'}),pos=$('input',{placeholder:'position'}),imp=$('input',{placeholder:'impressions'}); var s=$('button',{class:'btn primary'},'Add'); var m=modal('Add '+title,$('div',null,field('Keyword',kw),field('Position',pos),field('Impressions',imp)),[s]); s.addEventListener('click',async function(){ if(!kw.value){toast('Keyword required',true);return;} await api('geo/keywords',{method:'POST',body:{keyword:kw.value,kind:kind,position:pos.value||null,impressions:imp.value||null}}); m.close(); geoDiagnoser(box); }); });
+    var card=$('div',{class:'card pad'}, $('div',{class:'row between'},$('div',null,$('strong',null,title),$('div',{class:'muted small'},hint)),add));
+    var d=await api('geo/keywords'); var rows=d.rows.filter(function(r){return r.kind===kind;});
+    if(!rows.length) card.appendChild(emptyState('-')); else { var tbody=$('tbody'); rows.forEach(function(r){ var del=$('button',{class:'btn sm danger'},icon('trash')); del.addEventListener('click',async function(){ await api('geo/keywords/'+r.id,{method:'DELETE'}); geoDiagnoser(box); }); tbody.appendChild($('tr',null,$('td',null,dash(r.keyword)),$('td',null,dash(r.position)),$('td',null,fmtN(r.impressions)),$('td',{class:'right'},del))); }); card.appendChild($('table',null,$('thead',null,$('tr',null,$('th',null,'Keyword'),$('th',null,'Pos'),$('th',null,'Impr'),$('th',null,''))),tbody)); }
+    return card;
+  }
+  box.appendChild($('div',{class:'grid',style:{gridTemplateColumns:'1fr 1fr'}}, await section('striking','Striking distance','Keywords at positions 11-20 - close to page 1.'), await section('ai_gap','AI gap','Queries where you rank but are not cited by AI engines.')));
+}
+async function geoFixer(box){
+  clr(box);
+  var d=await api('geo/files'); var byKind={}; d.rows.forEach(function(r){ byKind[r.kind]=r; });
+  var KINDS=[['llms_txt','llms.txt','Tell AI crawlers what your site is about.'],['robots_txt','robots.txt','Allow AI bots; reference sitemap.'],['schema','schema (JSON-LD)','Organization / Article structured data.']];
+  function gen(kind){ if(kind==='llms_txt') return '# llms.txt\n# Site summary for AI crawlers\nUser-agent: *\nAllow: /\n\n# About\n# Describe your business here.\n'; if(kind==='robots_txt') return 'User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: Google-Extended\nAllow: /\n\nSitemap: https://yoursite.com/sitemap.xml\n'; return '{\n  "@context":"https://schema.org",\n  "@type":"Organization",\n  "name":"Your Company",\n  "url":"https://yoursite.com"\n}\n'; }
+  KINDS.forEach(function(k){
+    var ta=$('textarea',{rows:'8',style:{fontFamily:'monospace',fontSize:'12px'}}, (byKind[k[0]]&&byKind[k[0]].content)||'');
+    var genBtn=$('button',{class:'btn sm'},'Generate starter'); genBtn.addEventListener('click',function(){ ta.value=gen(k[0]); });
+    var save=$('button',{class:'btn sm primary'},'Save'); save.addEventListener('click',async function(){ await api('geo/files',{method:'PUT',body:{kind:k[0],content:ta.value}}); toast('Saved '+k[1]); });
+    var copy=$('button',{class:'btn sm'},'Copy'); copy.addEventListener('click',function(){ var t=ta.value||''; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Copied '+k[1]);},function(){ ta.select(); document.execCommand('copy'); toast('Copied'); }); } else { ta.select(); document.execCommand('copy'); toast('Copied'); } });
+    box.appendChild($('div',{class:'card pad',style:{marginBottom:'14px'}}, $('div',{class:'row between'},$('div',null,$('strong',null,k[1]),$('div',{class:'muted small'},k[2])),$('div',{class:'row'},genBtn,copy,save)), $('div',{style:{marginTop:'10px'}},ta)));
+  });
+}
+async function geoReport(box){
+  clr(box);
+  var d=await api('geo/snapshots'); var rows=d.rows.slice().reverse();
+  box.appendChild($('div',{class:'card pad'}, $('strong',null,'Live report'),
+    rows.length?$('div',{class:'grid kpis',style:{marginTop:'10px'}}, mini('Latest clicks',fmtN(rows[rows.length-1].clicks)),mini('Latest impressions',fmtN(rows[rows.length-1].impressions)),mini('Snapshots',rows.length),mini('GEO score',dash(rows[rows.length-1].geo_score))):emptyState('No snapshots to report yet.')));
+  var tl=$('div',{class:'card pad',style:{marginTop:'14px'}}, $('strong',null,'Recent activity'));
+  if(!rows.length) tl.appendChild(emptyState('-'));
+  else rows.slice(-12).reverse().forEach(function(r){ tl.appendChild($('div',{class:'row between',style:{padding:'7px 0',borderBottom:'1px solid #f0f2f8'}}, $('span',null,r.snapshot_date+' ('+dash(r.source)+')'), $('span',{class:'small muted'}, 'clicks '+dash(r.clicks)+', impr '+dash(r.impressions)+', pos '+dash(r.avg_position)))); });
+  box.appendChild(tl);
+}
+
+/* ============================ Backlinks Hub ============================ */
+async function pageBacklinks(content){
+  clr(content);
+  var tabs=[['mapper','Mapper'],['acquirer','Acquirer'],['reclaimer','Reclaimer'],['ledger','Ledger']];
+  content.appendChild(tabBar(tabs,state.blTab,function(t){ state.blTab=t; pageBacklinks(content); }));
+  var box=$('div'); content.appendChild(box);
+  if(state.blTab==='mapper') return blMapper(box);
+  if(state.blTab==='acquirer') return blAcquirer(box);
+  if(state.blTab==='reclaimer') return blReclaimer(box);
+  if(state.blTab==='ledger') return blLedger(box);
+}
+async function blMapper(box){
+  clr(box);
+  // own domains
+  var ownCard=$('div',{class:'card pad',style:{marginBottom:'14px'}}, $('strong',null,'Your referring domains'), $('div',{class:'muted small',style:{margin:'4px 0 8px'}},'Upload your own backlink CSV so the gap diff can subtract domains you already have.'));
+  var ownFile=$('input',{type:'file',accept:'.csv,.tsv,.xlsx,.xls'});
+  ownFile.addEventListener('change',async function(){ var f=ownFile.files[0]; if(!f)return; try{ var rows=await fileToRows(f); var headers=rows[0]; var di=findCol(headers,['domain','referring','url']); var dri=findCol(headers,['dr','domain rating','rating']); var list=rows.slice(1).map(function(r){ return {domain:r[di],dr:dri>=0?r[dri]:null}; }).filter(function(x){return x.domain;}); var res=await api('bl/own-domains',{method:'POST',body:{domains:list}}); toast('Saved '+res.upserted+' domains'); blMapper(box); }catch(e){ toast(e.message,true); } });
+  ownCard.appendChild(ownFile);
+  var own=await api('bl/own-domains'); ownCard.appendChild($('div',{class:'muted small',style:{marginTop:'8px'}}, own.rows.length+' own domains on file.'));
+  box.appendChild(ownCard);
+  // competitor gap
+  var gapCard=$('div',{class:'card pad'}, $('strong',null,'Competitor gap'), $('div',{class:'muted small',style:{margin:'4px 0 8px'}},'Upload a competitor referring-domains CSV (Ahrefs export, UTF-16 TSV or UTF-8 CSV). We subtract your domains and rank the rest by DR.'));
+  var comp=$('input',{placeholder:'Competitor label (optional)',style:{maxWidth:'240px'}});
+  var gapFile=$('input',{type:'file',accept:'.csv,.tsv,.xlsx,.xls',style:{marginTop:'8px'}});
+  gapFile.addEventListener('change',async function(){ var f=gapFile.files[0]; if(!f)return; try{ var rows=await fileToRows(f); var headers=rows[0]; var di=findCol(headers,['domain','referring page','referring','url']); var dri=findCol(headers,['domain rating','dr','rating']); var fi=findCol(headers,['follow','dofollow','type','nofollow']); var parsed=rows.slice(1).map(function(r){ var fv=fi>=0?String(r[fi]).toLowerCase():''; return {domain:r[di],dr:dri>=0?r[dri]:null,dofollow: fi>=0?(fv.indexOf('dofollow')>=0||fv==='follow'||fv==='true'||fv==='1'):true}; }).filter(function(x){return x.domain;}); var res=await api('bl/gap',{method:'POST',body:{rows:parsed,competitor:comp.value||null}}); toast('Found '+res.inserted+' gap domains ('+res.skipped_own+' already yours)'); blMapper(box); }catch(e){ toast(e.message,true); } });
+  gapCard.appendChild($('div',{class:'row'},comp,gapFile));
+  var gap=await api('bl/gap'); var rows=gap.rows;
+  if(rows.length){ var csv=$('button',{class:'btn sm',style:{marginTop:'10px'}},'Export gap CSV'); csv.addEventListener('click',function(){ downloadCSV('gap.csv',rows,['domain','dr','dofollow','competitor']); }); gapCard.appendChild(csv);
+    var tbody=$('tbody'); rows.slice(0,200).forEach(function(r){ var add=$('button',{class:'btn sm'},'To outreach'); add.addEventListener('click',async function(){ await api('outreach',{method:'POST',body:{domain:r.domain,domain_rating:r.dr,outreach_status:'prospect'}}); toast('Added to pipeline'); }); tbody.appendChild($('tr',null,$('td',null,$('strong',null,r.domain)),$('td',null,dash(r.dr)),$('td',null,r.dofollow?'dofollow':'nofollow'),$('td',{class:'right'},add))); });
+    gapCard.appendChild($('div',{style:{overflowX:'auto',marginTop:'10px'}},$('table',null,$('thead',null,$('tr',null,$('th',null,'Domain'),$('th',null,'DR'),$('th',null,'Type'),$('th',null,''))),tbody)));
+  } else gapCard.appendChild(emptyState('No gap data yet. Upload a competitor CSV.'));
+  box.appendChild(gapCard);
+}
+async function blAcquirer(box){ clr(box); box.appendChild($('div',{class:'card pad',style:{marginBottom:'14px'}},$('span',{class:'muted'},'Acquisition pipeline mirrors the Pitch Pipeline stages.'))); var d=await api('outreach'); var stages=['prospect','pitched','replied','negotiating','won','published']; var grid=$('div',{class:'grid kpis'}); stages.forEach(function(s){ grid.appendChild(mini(s.replace(/_/g,' '), d.rows.filter(function(r){return r.outreach_status===s;}).length)); }); box.appendChild(grid); var go=$('button',{class:'btn primary',style:{marginTop:'14px'}},'Open Pitch Pipeline'); go.addEventListener('click',function(){ state.page='pitch'; renderApp(); }); box.appendChild(go); }
+async function blReclaimer(box){
+  clr(box);
+  box.appendChild(noteCard('Unlinked mentions: log brand mentions that should link to you. This is an honest manual log - no scraping behind logins.'));
+  var add=$('button',{class:'btn sm primary'},icon('plus'),'Log mention');
+  add.addEventListener('click',function(){ var dom=$('input',{placeholder:'domain'}),note=$('input',{placeholder:'where / context'}); var s=$('button',{class:'btn primary'},'Log'); var m=modal('Log unlinked mention',$('div',null,field('Domain',dom),field('Context',note)),[s]); s.addEventListener('click',async function(){ if(!dom.value){toast('Domain required',true);return;} await api('outreach',{method:'POST',body:{domain:dom.value,pitch_type:'niche_edit',outreach_status:'prospect',notes:'Unlinked mention: '+note.value}}); m.close(); toast('Logged to pipeline'); }); });
+  box.appendChild($('div',{class:'card pad row between'},$('strong',null,'Unlinked mentions'),add));
+}
+async function blLedger(box){ clr(box); box.appendChild($('div',{class:'card pad'},$('strong',null,'Ledger'),$('div',{class:'muted small',style:{margin:'8px 0'}},'The live link ledger reuses Link Health verification.'),(function(){ var b=$('button',{class:'btn primary'},'Open Link Health'); b.addEventListener('click',function(){ state.page='health'; renderApp(); }); return b; })())); }
+
+/* ============================ init ============================ */
+// OAuth tools: a Connect button starts the authorize flow.
+// connect = {url:'google/auth-url?for=gsc'} -> GET that endpoint, then redirect to the returned url.
+// Key tools: env = ['AHREFS_API_KEY', ...] -> show which env vars to set in Render.
+function platformCard(name,color,abbr,st,opts){
+  opts = opts || {};
+  var isConnected = !!(st && st.connected);
+  var label = !st ? 'Not available' : st.connected ? 'Connected' : st.configured ? 'Configured' : 'Not configured';
+  var cls = st && st.connected ? 'b-live' : (st && st.configured ? 'b-pending' : 'b-unverifiable');
+  var foot = $('div',{style:{marginTop:'8px'}});
+
+  // OAuth: configured but not yet connected -> offer a real Connect button.
+  if (opts.connect && st && st.configured && !st.connected) {
+    var cbtn = $('button',{class:'btn primary sm'}, 'Connect ' + (opts.connectLabel||name));
+    cbtn.addEventListener('click', async function(){
+      cbtn.disabled = true; var old = cbtn.textContent; cbtn.textContent = 'Opening...';
+      try { var u = await api(opts.connect); window.location.href = u.url; }
+      catch(e){ cbtn.disabled = false; cbtn.textContent = old; foot.appendChild($('div',{class:'small',style:{color:'var(--bad)',marginTop:'6px'}}, e.message)); }
+    });
+    foot.appendChild(cbtn);
+  }
+  // OAuth: not configured -> tell them which env vars unlock the Connect button.
+  else if (opts.connect && (!st || !st.configured)) {
+    foot.appendChild(envHint(opts.env, 'Add in Render, then Connect appears'));
+  }
+  // Key tools: not configured -> show env var(s) to add in Render.
+  else if (opts.env && (!st || !st.configured)) {
+    foot.appendChild(envHint(opts.env, 'Add in Render to activate'));
+  }
+  // Anything already connected/configured with nothing further to do.
+  else if (st && (st.connected || st.configured)) {
+    foot.appendChild($('div',{class:'small muted',style:{marginTop:'2px'}}, st.connected ? 'Active and authorized.' : 'Active.'));
+  }
+
+  // Connected badge gets a checkmark so connected platforms are unmistakable.
+  var badge = isConnected
+    ? $('span',{class:'badge b-live',style:{display:'inline-flex',alignItems:'center',gap:'4px'}},
+        $('span',{html:'<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'}),
+        'Connected')
+    : $('span',{class:'badge '+cls}, label);
+
+  var cardStyle = {alignItems:'flex-start'};
+  if (isConnected) { cardStyle.borderLeft = '3px solid var(--ok)'; }
+
+  return $('div',{class:'platform',style:cardStyle},
+    $('div',{class:'pi',style:{background:color}}, abbr),
+    $('div',{style:{flex:1}},
+      $('div',{style:{fontWeight:600}}, name),
+      badge,
+      foot) );
+}
+function envHint(vars, caption){
+  vars = vars || [];
+  var wrap = $('div',{style:{marginTop:'6px'}});
+  wrap.appendChild($('div',{class:'small muted',style:{marginBottom:'4px'}}, caption));
+  vars.forEach(function(v){
+    var row = $('div',{class:'row between',style:{gap:'6px',marginBottom:'4px'}});
+    var code = $('code',{style:{fontSize:'11px',background:'rgba(0,0,0,.06)',padding:'2px 6px',borderRadius:'4px',overflow:'hidden',textOverflow:'ellipsis'}}, v);
+    var copy = $('button',{class:'btn sm',title:'Copy variable name'}, 'Copy');
+    copy.addEventListener('click', function(){
+      navigator.clipboard.writeText(v).then(function(){ var t=copy.textContent; copy.textContent='Copied'; setTimeout(function(){copy.textContent=t;},1200); });
+    });
+    row.appendChild(code); row.appendChild(copy); wrap.appendChild(row);
+  });
+  return wrap;
+}
+function integrationsGrid(status){
+  var defs=[
+    ['Gmail','#EA4335','GM',status.gmail,{connect:'google/auth-url?for=gmail',connectLabel:'Gmail',env:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI']}],
+    ['Google Search Console','#1a73e8','GSC',status.gsc,{connect:'google/auth-url?for=gsc',connectLabel:'Search Console',env:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GSC_REDIRECT_URI','GSC_SITE_URL']}],
+    ['PageSpeed Insights','#0b8043','PSI',status.pagespeed,{env:['PAGESPEED_API_KEY']}],
+    ['Ahrefs','#ff7a00','AH',status.ahrefs,{env:['AHREFS_API_KEY']}],
+    ['Moz','#2e7fff','MZ',status.moz,{env:['MOZ_ACCESS_ID','MOZ_SECRET_KEY']}],
+    ['LinkedIn','#0a66c2','IN',status.linkedin,{connect:'linkedin/auth-url',connectLabel:'LinkedIn',env:['LINKEDIN_CLIENT_ID','LINKEDIN_CLIENT_SECRET','LINKEDIN_REDIRECT_URI']}],
+    ['Semrush','#ff642d','SR',status.semrush,{env:['SEMRUSH_API_KEY']}],
+    ['Facebook','#1877f2','FB',status.facebook,{connect:'facebook/auth-url',connectLabel:'Facebook',env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET','FACEBOOK_REDIRECT_URI']}],
+    ['Instagram','#e1306c','IG',status.instagram,{connect:'facebook/auth-url',connectLabel:'Instagram (via Facebook)',env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET','FACEBOOK_REDIRECT_URI']}],
+    ['Twitter / X','#111111','X',status.twitter,{env:['TWITTER_BEARER_TOKEN']}]
+  ];
+  var g=$('div',{class:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'12px'}});
+  defs.forEach(function(d){ g.appendChild(platformCard(d[0],d[1],d[2],d[3],d[4])); });
+  return g;
+}
+async function pageAccount(content){
+  clr(content);
+  var me=(await api('auth/me')).user||{};
+  var status=await api('integrations/status');
+  var initial=(me.name||me.email||'U').slice(0,1).toUpperCase();
+  content.appendChild($('div',{class:'card pad',style:{marginBottom:'14px'}},
+    $('div',{class:'row',style:{gap:'14px'}},
+      $('div',{style:{width:'56px',height:'56px',borderRadius:'14px',background:'linear-gradient(135deg,var(--blue),var(--navy))',color:'#fff',display:'grid',placeItems:'center',fontSize:'22px',fontWeight:'700'}}, initial),
+      $('div',null, $('div',{style:{fontSize:'18px',fontWeight:'700'}}, dash(me.name)||dash(me.email)), $('div',{class:'muted small'}, dash(me.email))))));
+  content.appendChild($('div',{class:'card pad'}, $('strong',null,'Connected platforms'), $('div',{class:'muted small',style:{margin:'4px 0 12px'}},'OAuth tools (Google, LinkedIn) connect with a button once their keys are set in Render. Key-based tools activate as soon as their environment variable is added in Render.'),
+    integrationsGrid(status)));
+}
+async function init(){
+  if(!state.token){ renderLogin(); return; }
+  try{ var me=await api('auth/me'); if(!me.user){ logout(); return; } state.user=me.user; renderApp();
+    try{ var rem=await api('reminders'); state.reminders=rem.rows.filter(function(r){return !r.done;}).length; }catch(e){}
+  }catch(e){ logout(); }
+}
+init();
+</script>
 </body>
 </html>
