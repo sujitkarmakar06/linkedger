@@ -1197,29 +1197,75 @@ async function blReclaimer(box){
 async function blLedger(box){ clr(box); box.appendChild($('div',{class:'card pad'},$('strong',null,'Ledger'),$('div',{class:'muted small',style:{margin:'8px 0'}},'The live link ledger reuses Link Health verification.'),(function(){ var b=$('button',{class:'btn primary'},'Open Link Health'); b.addEventListener('click',function(){ state.page='health'; renderApp(); }); return b; })())); }
 
 /* ============================ init ============================ */
-function platformCard(name,color,abbr,st){
-  var ok = st && (st.connected || st.configured);
+// OAuth tools: a Connect button starts the authorize flow.
+// connect = {url:'google/auth-url?for=gsc'} -> GET that endpoint, then redirect to the returned url.
+// Key tools: env = ['AHREFS_API_KEY', ...] -> show which env vars to set in Render.
+function platformCard(name,color,abbr,st,opts){
+  opts = opts || {};
   var label = !st ? 'Not available' : st.connected ? 'Connected' : st.configured ? 'Configured' : 'Not configured';
   var cls = st && st.connected ? 'b-live' : (st && st.configured ? 'b-pending' : 'b-unverifiable');
-  return $('div',{class:'platform'},
+  var foot = $('div',{style:{marginTop:'8px'}});
+
+  // OAuth: configured but not yet connected -> offer a real Connect button.
+  if (opts.connect && st && st.configured && !st.connected) {
+    var cbtn = $('button',{class:'btn primary sm'}, 'Connect ' + (opts.connectLabel||name));
+    cbtn.addEventListener('click', async function(){
+      cbtn.disabled = true; var old = cbtn.textContent; cbtn.textContent = 'Opening...';
+      try { var u = await api(opts.connect); window.location.href = u.url; }
+      catch(e){ cbtn.disabled = false; cbtn.textContent = old; foot.appendChild($('div',{class:'small',style:{color:'var(--bad)',marginTop:'6px'}}, e.message)); }
+    });
+    foot.appendChild(cbtn);
+  }
+  // OAuth: not configured -> tell them which env vars unlock the Connect button.
+  else if (opts.connect && (!st || !st.configured)) {
+    foot.appendChild(envHint(opts.env, 'Add in Render, then Connect appears'));
+  }
+  // Key tools: not configured -> show env var(s) to add in Render.
+  else if (opts.env && (!st || !st.configured)) {
+    foot.appendChild(envHint(opts.env, 'Add in Render to activate'));
+  }
+  // Anything already connected/configured with nothing further to do.
+  else if (st && (st.connected || st.configured)) {
+    foot.appendChild($('div',{class:'small muted',style:{marginTop:'2px'}}, st.connected ? 'Active and authorized.' : 'Active.'));
+  }
+
+  return $('div',{class:'platform',style:{alignItems:'flex-start'}},
     $('div',{class:'pi',style:{background:color}}, abbr),
-    $('div',{style:{flex:1}}, $('div',{style:{fontWeight:600}}, name), $('span',{class:'badge '+cls}, label)) );
+    $('div',{style:{flex:1}},
+      $('div',{style:{fontWeight:600}}, name),
+      $('span',{class:'badge '+cls}, label),
+      foot) );
+}
+function envHint(vars, caption){
+  vars = vars || [];
+  var wrap = $('div',{style:{marginTop:'6px'}});
+  wrap.appendChild($('div',{class:'small muted',style:{marginBottom:'4px'}}, caption));
+  vars.forEach(function(v){
+    var row = $('div',{class:'row between',style:{gap:'6px',marginBottom:'4px'}});
+    var code = $('code',{style:{fontSize:'11px',background:'rgba(0,0,0,.06)',padding:'2px 6px',borderRadius:'4px',overflow:'hidden',textOverflow:'ellipsis'}}, v);
+    var copy = $('button',{class:'btn sm',title:'Copy variable name'}, 'Copy');
+    copy.addEventListener('click', function(){
+      navigator.clipboard.writeText(v).then(function(){ var t=copy.textContent; copy.textContent='Copied'; setTimeout(function(){copy.textContent=t;},1200); });
+    });
+    row.appendChild(code); row.appendChild(copy); wrap.appendChild(row);
+  });
+  return wrap;
 }
 function integrationsGrid(status){
   var defs=[
-    ['Gmail','#EA4335','GM',status.gmail],
-    ['Google Search Console','#1a73e8','GSC',status.gsc],
-    ['PageSpeed Insights','#0b8043','PSI',status.pagespeed],
-    ['Ahrefs','#ff7a00','AH',status.ahrefs],
-    ['Moz','#2e7fff','MZ',status.moz],
-    ['LinkedIn','#0a66c2','IN',status.linkedin],
-    ['Semrush','#ff642d','SR',status.semrush],
-    ['Facebook','#1877f2','FB',status.facebook],
-    ['Instagram','#e1306c','IG',status.instagram],
-    ['Twitter / X','#111111','X',status.twitter]
+    ['Gmail','#EA4335','GM',status.gmail,{connect:'google/auth-url?for=gmail',connectLabel:'Gmail',env:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI']}],
+    ['Google Search Console','#1a73e8','GSC',status.gsc,{connect:'google/auth-url?for=gsc',connectLabel:'Search Console',env:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GSC_REDIRECT_URI','GSC_SITE_URL']}],
+    ['PageSpeed Insights','#0b8043','PSI',status.pagespeed,{env:['PAGESPEED_API_KEY']}],
+    ['Ahrefs','#ff7a00','AH',status.ahrefs,{env:['AHREFS_API_KEY']}],
+    ['Moz','#2e7fff','MZ',status.moz,{env:['MOZ_ACCESS_ID','MOZ_SECRET_KEY']}],
+    ['LinkedIn','#0a66c2','IN',status.linkedin,{connect:'linkedin/auth-url',connectLabel:'LinkedIn',env:['LINKEDIN_CLIENT_ID','LINKEDIN_CLIENT_SECRET','LINKEDIN_REDIRECT_URI']}],
+    ['Semrush','#ff642d','SR',status.semrush,{env:['SEMRUSH_API_KEY']}],
+    ['Facebook','#1877f2','FB',status.facebook,{env:['FACEBOOK_APP_ID','FACEBOOK_APP_SECRET']}],
+    ['Instagram','#e1306c','IG',status.instagram,{env:['INSTAGRAM_ACCESS_TOKEN']}],
+    ['Twitter / X','#111111','X',status.twitter,{env:['TWITTER_BEARER_TOKEN']}]
   ];
-  var g=$('div',{class:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'12px'}});
-  defs.forEach(function(d){ g.appendChild(platformCard(d[0],d[1],d[2],d[3])); });
+  var g=$('div',{class:'grid',style:{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'12px'}});
+  defs.forEach(function(d){ g.appendChild(platformCard(d[0],d[1],d[2],d[3],d[4])); });
   return g;
 }
 async function pageAccount(content){
@@ -1231,7 +1277,7 @@ async function pageAccount(content){
     $('div',{class:'row',style:{gap:'14px'}},
       $('div',{style:{width:'56px',height:'56px',borderRadius:'14px',background:'linear-gradient(135deg,var(--blue),var(--navy))',color:'#fff',display:'grid',placeItems:'center',fontSize:'22px',fontWeight:'700'}}, initial),
       $('div',null, $('div',{style:{fontSize:'18px',fontWeight:'700'}}, dash(me.name)||dash(me.email)), $('div',{class:'muted small'}, dash(me.email))))));
-  content.appendChild($('div',{class:'card pad'}, $('strong',null,'Connected platforms'), $('div',{class:'muted small',style:{margin:'4px 0 12px'}},'Activate by adding each service key in your environment, then connect.'),
+  content.appendChild($('div',{class:'card pad'}, $('strong',null,'Connected platforms'), $('div',{class:'muted small',style:{margin:'4px 0 12px'}},'OAuth tools (Google, LinkedIn) connect with a button once their keys are set in Render. Key-based tools activate as soon as their environment variable is added in Render.'),
     integrationsGrid(status)));
 }
 async function init(){
