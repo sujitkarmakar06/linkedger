@@ -241,21 +241,32 @@ function renderLogin(){
   var err = $('div',{class:'small',style:{color:'var(--bad)',minHeight:'18px',marginBottom:'8px'}});
   var btn = $('button',{class:'btn primary',style:{width:'100%'}}, 'Sign in');
   var mode = 'login';
+  var LABELS = {
+    login:    { title:'Welcome back',   subtitle:'Sign in to LinkLedger.',        btn:'Sign in',       toggle:'New here? Create an account' },
+    register: { title:'Create account', subtitle:'Set up your LinkLedger access.', btn:'Create account', toggle:'Have an account? Sign in' }
+  };
+  function applyMode(){
+    var L = LABELS[mode];
+    title.textContent = L.title;
+    subtitle.textContent = L.subtitle;
+    clr(btn).appendChild(document.createTextNode(L.btn));
+    toggle.textContent = L.toggle;
+    err.textContent = '';
+  }
   async function submit(){
     err.textContent=''; btn.disabled=true; clr(btn).appendChild($('span',{class:'spin'}));
     try{
       var path = mode==='login'?'auth/login':'auth/register';
       var d = await api(path,{method:'POST',body:{email:email.value.trim(),password:pass.value,name:email.value.split('@')[0]}});
       state.token=d.token; state.user=d.user; localStorage.setItem('ll_token',d.token); renderApp();
-    }catch(e){ err.textContent=e.message; btn.disabled=false; clr(btn).appendChild(document.createTextNode('Sign in')); }
+    }catch(e){ err.textContent=e.message; btn.disabled=false; clr(btn).appendChild(document.createTextNode(LABELS[mode].btn)); }
   }
   btn.addEventListener('click',submit);
   pass.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
-  var toggle = $('a',{href:'#',style:{cursor:'pointer'}}, 'Create the team account');
-  toggle.addEventListener('click',function(ev){ ev.preventDefault(); mode = mode==='login'?'register':'login';
-    title.textContent = mode==='login'?'Welcome back':'Create account';
-    toggle.textContent = mode==='login'?'Create the team account':'Have an account? Sign in'; });
-  var title = $('h1',{style:{fontSize:'22px',margin:'0 0 4px'}}, 'Welcome back');
+  var toggle = $('a',{href:'#',style:{cursor:'pointer'}}, LABELS.login.toggle);
+  toggle.addEventListener('click',function(ev){ ev.preventDefault(); mode = mode==='login'?'register':'login'; applyMode(); });
+  var title = $('h1',{style:{fontSize:'22px',margin:'0 0 4px'}}, LABELS.login.title);
+  var subtitle = $('div',{class:'muted',style:{marginBottom:'20px'}}, LABELS.login.subtitle);
   root.appendChild($('div',{class:'login-wrap'},
     $('div',{class:'login-brand'},
       $('div',{html:LOGO_SVG.replace('width="30" height="30"','width="64" height="64"')}),
@@ -265,13 +276,14 @@ function renderLogin(){
     $('div',{class:'login-form'}, $('div',{class:'box'},
       $('div',{html:LOGO_SVG,style:{marginBottom:'12px'}}),
       title,
-      $('div',{class:'muted',style:{marginBottom:'20px'}}, 'Sign in to LinkLedger.'),
+      subtitle,
       $('div',{class:'field'}, $('label',{class:'fld'},'Email'), email),
       $('div',{class:'field'}, $('label',{class:'fld'},'Password'), pass),
       err, btn,
       $('div',{class:'center small muted',style:{marginTop:'14px'}}, toggle)
     ))
   ));
+  applyMode();
 }
 /* ============================ app shell + nav ============================ */
 var NAV = [
