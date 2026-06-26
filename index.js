@@ -788,7 +788,7 @@ app.post('/api/email/send/:id', auth, wrap(async (req, res) => {
 app.get('/api/linkedin/auth-url', auth, wrap(async (req, res) => {
   const id = envOrNull('LINKEDIN_CLIENT_ID'); const redirect = envOrNull('LINKEDIN_REDIRECT_URI');
   if (!id || !redirect) return res.status(400).json({ error: 'LinkedIn OAuth not configured.' });
-  const p = new URLSearchParams({ response_type: 'code', client_id: id, redirect_uri: redirect, scope: 'r_liteprofile', state: 'linkedin' });
+  const p = new URLSearchParams({ response_type: 'code', client_id: id, redirect_uri: redirect, scope: 'openid profile email', state: 'linkedin' });
   res.json({ url: 'https://www.linkedin.com/oauth/v2/authorization?' + p.toString() });
 }));
 app.get('/api/linkedin/callback', wrap(async (req, res) => {
