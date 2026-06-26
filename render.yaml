@@ -1,0 +1,75 @@
+# LinkLedger - Render Blueprint (near one-click deploy)
+# In Render: New + > Blueprint > connect this repo. It provisions the Postgres
+# DB and the web service, wires DATABASE_URL automatically, and generates
+# JWT_SECRET. Then open the service > Environment and paste the integration
+# keys (the ones marked sync:false are left blank for you to fill).
+databases:
+  - name: linkledger-db
+    plan: free
+    databaseName: linkledger
+    user: linkledger
+
+services:
+  - type: web
+    name: linkledger
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: linkledger-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_VERSION
+        value: "20"
+      # --- Google (Gmail + GSC) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GSC_REDIRECT_URI
+        sync: false
+      - key: GSC_SITE_URL
+        sync: false
+      - key: GSC_REFRESH_TOKEN
+        sync: false
+      # --- PageSpeed ---
+      - key: PAGESPEED_API_KEY
+        sync: false
+      - key: PAGESPEED_URL
+        sync: false
+      # --- Ahrefs / Moz ---
+      - key: AHREFS_API_KEY
+        sync: false
+      - key: MOZ_ACCESS_ID
+        sync: false
+      - key: MOZ_SECRET_KEY
+        sync: false
+      # --- LinkedIn ---
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        sync: false
+      # --- Social / SEO (optional) ---
+      - key: SEMRUSH_API_KEY
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+      - key: TWITTER_BEARER_TOKEN
+        sync: false
+      # --- GEO cron ---
+      - key: GEO_CRON_TOKEN
+        generateValue: true

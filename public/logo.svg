@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" width="680" height="680" role="img" aria-label="LinkLedger logo">
+  <!-- Interlocking two-tone chevron mark. Navy #0A1A4F, Blue #4D8BF5. Sharp/angular ends. -->
+  <g fill="none" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="6" stroke-width="104">
+    <path d="M196 340 L378 540" stroke="#4D8BF5"/>
+    <path d="M302 140 L484 340" stroke="#4D8BF5"/>
+    <path d="M378 140 L196 340" stroke="#0A1A4F"/>
+    <path d="M484 340 L302 540" stroke="#0A1A4F"/>
+  </g>
+</svg>
